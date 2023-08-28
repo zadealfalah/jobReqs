@@ -9,25 +9,23 @@
 USE -- whatever db I end up making on AWS with terraform
 
 CREATE TABLE IF NOT EXISTS jobs (
-    id INT NOT NULL AUTO_INCREMENT,
+    id INT PRIMARY KEY NOT NULL AUTO_INCREMENT,
     title VARCHAR (150) NOT NULL,
     company VARCHAR(150) NOT NULL,
     location VARCHAR(150),
-    salary INT,
-    PRIMARY KEY (id)
+    salary INT
 )
 
 
 CREATE TABLE IF NOT EXISTS tags (
-    tag_id INT NOT NULL AUTO_INCREMENT,
-    name VARCHAR(100) NOT NULL,
-    PRIMARY KEY (tag_id)
+    tag_id INT PRIMARY KEY NOT NULL AUTO_INCREMENT,
+    name VARCHAR(100) NOT NULL
 )
 
 CREATE TABLE IF NOT EXISTS tagmap (
-    id INT NOT NULL AUTO_INCREMENT,
+    id INT PRIMARY KEY NOT NULL AUTO_INCREMENT,
     job_id INT NOT NULL,
     tag_id INT NOT NULL,
     FOREIGN KEY(job_id) REFERENCES jobs.id ON DELETE CASCADE,
-    FOREIGN KEY (tag_id) REFERENCES tags.tag_id ON DELETE CASCADE
+    FOREIGN KEY (tag_id) REFERENCES tags.tag_id ON DELETE CASCADE -- shouldn't be necesarry to delete tags, but just in case
 )
