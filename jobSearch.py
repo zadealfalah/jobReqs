@@ -8,22 +8,12 @@ import re
 from bs4 import BeautifulSoup as bs
 from urllib.parse import urlencode
 
-
-# def main():
-#     options = webdriver.FirefoxOptions()
-#     driver = webdriver.Firefox(options=options)
-
-    
-    
-    
-#     jobs = scrape_jobs()
-
-
+json_path = "test.json"
 
 def scrape_jobs(query:str, location:str):
     options = webdriver.FirefoxOptions()
+    options.headless = True  #### Need to change to non-depreciated style
     driver = webdriver.Firefox(options=options)
-    
     def make_page_url(offset):
         params = {"q": query, "l": location, "start":offset}
         return "https://www.indeed.com/jobs?" + urlencode(params)
@@ -31,12 +21,13 @@ def scrape_jobs(query:str, location:str):
     
     print(f"First URL: {make_page_url(0)}")
     driver.get(make_page_url(0))
-    soup = bs(driver.page_source)
+    time.sleep(5)
+    soup = bs(driver.page_source, features='html.parser')
     
     results = soup.find(id='jobsearch-Main')
     job_elements = results.find_all("div", class_="slider_item")
     d = {}
-    for job_element in job_elements[:1]:
+    for job_element in job_elements:
         link_element_id = job_element.find_all("a")[0]["id"]
 
         d[link_element_id] = {}
@@ -52,21 +43,22 @@ def scrape_jobs(query:str, location:str):
         except AttributeError:
             d[link_element_id]['salary'] = "Not Listed"
         # date_element = job_element.find("div", class_="visually-hidden")  # not useful as-is.  figure out if this is possible to find at all
-
+        time.sleep(0.1)
         WebDriverWait(driver, 2).until(EC.element_to_be_clickable((By.XPATH, f'//*[@id="{link_element_id}"]'))).click()
-
-
-        time.sleep(5)
-        
-        temp_results = soup.find("div", id='jobDescriptionText')
-        print(temp_results)
-        print(d[link_element_id]["title"], d[link_element_id]["company"])
-        # print(d[link_element_id]['title'], d[link_element_id]['company'])
+        WebDriverWait(driver, 5).until(EC.element_to_be_clickable((By.XPATH, f'//*[@id="jobDescriptionText"]')))
+        temp_results = results.find("div", id="jobDescriptionText")
+        print(d[link_element_id]['title'], d[link_element_id]['company'])
+        # print(d)
+        # print(temp_results.text.strip())
         d[link_element_id]['desc'] = temp_results.text.strip()
-    
+        
     return d
 
-scrape_jobs(query='python', location='remote')
+job_dict = scrape_jobs(query='python', location='remote')
+
+
+with open(json_path, "w") as outfile:
+    json.dump(job_dict, outfile)
 
 # options = webdriver.FirefoxOptions()
 # driver = webdriver.Firefox(options=options)
