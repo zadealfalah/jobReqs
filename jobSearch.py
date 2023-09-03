@@ -12,7 +12,7 @@ json_path = "test.json"
 
 def scrape_jobs(query:str, location:str):
     options = webdriver.FirefoxOptions()
-    options.headless = True  #### Need to change to non-depreciated style
+    # options.headless = True  #### Need to change to non-depreciated style
     driver = webdriver.Firefox(options=options)
     def make_page_url(offset):
         params = {"q": query, "l": location, "start":offset}
