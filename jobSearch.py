@@ -1,97 +1,137 @@
 from selenium import webdriver
-from selenium.webdriver.support.ui import WebDriverWait
-from selenium.webdriver.common.by import By
-from selenium.webdriver.support import expected_conditions as EC
 import time
 import json
 import re
 from bs4 import BeautifulSoup as bs
 from urllib.parse import urlencode
+import threading
 
-json_path = "test.json"
 
-def scrape_jobs(query:str, location:str):
-    options = webdriver.FirefoxOptions()
-    # options.headless = True  #### Need to change to non-depreciated style
-    driver = webdriver.Firefox(options=options)
-    def make_page_url(offset):
-        params = {"q": query, "l": location, "start":offset}
-        return "https://www.indeed.com/jobs?" + urlencode(params)
-    print(f"Scraping first page of search: {query=}, {location=}")
+
+
+def get_url(query:str, location:str, offset=0, days_ago=1):
+    params = {"q":query, "l":location, "filter":0, "start":offset, "fromage":days_ago}
+    return "https://www.indeed.com/jobs?" + urlencode(params)
+
+
+
+def get_job_ids(driver, keyword, location, offset, days_ago):
+    global job_id_list
     
-    print(f"First URL: {make_page_url(0)}")
-    driver.get(make_page_url(0))
-    time.sleep(5)
-    soup = bs(driver.page_source, features='html.parser')
-    
-    results = soup.find(id='jobsearch-Main')
-    job_elements = results.find_all("div", class_="slider_item")
-    d = {}
-    for job_element in job_elements:
-        link_element_id = job_element.find_all("a")[0]["id"]
+    indeed_jobs_url = get_url(keyword, location, offset, days_ago)
+    try:
+        driver.get(indeed_jobs_url)
+        # time.sleep(np.random.uniform(1, 2))
+        response = driver.page_source  # get the html of the page
+        script_tag = re.findall(r'window.mosaic.providerData\["mosaic-provider-jobcards"\]=(\{.+?\});', response)
+        if script_tag is not None:
+            json_blob = json.loads(script_tag[0])
+            jobs_list = json_blob['metaData']['mosaicProviderJobCardsModel']['results']
+            for i, job in enumerate(jobs_list):
+                if job.get('jobkey') is not None:
+                    job_id_list.append((job.get('jobkey'), keyword))
+            # if len(jobs_list) < 10:
+            #     break
+    except Exception as e:
+        print("Error", e)
 
-        d[link_element_id] = {}
-        d[link_element_id]["title"] = job_element.find("h2", class_="jobTitle").text.strip()
-        d[link_element_id]['company'] = job_element.find("span", class_="companyName").text.strip()
-        d[link_element_id]['posted'] = job_element.find("span", class_="date").next_element.next_element.next_element
-        try:
-            d[link_element_id]['location'] = job_element.find("div", class_="companyLocation").text.strip()
-        except AttributeError: 
-            d[link_element_id]['location'] = "Not Listed"
-        try:
-            d[link_element_id]['salary'] = job_element.find("div", class_="metadata").text.strip()
-        except AttributeError:
-            d[link_element_id]['salary'] = "Not Listed"
-        # date_element = job_element.find("div", class_="visually-hidden")  # not useful as-is.  figure out if this is possible to find at all
-        time.sleep(0.1)
-        WebDriverWait(driver, 2).until(EC.element_to_be_clickable((By.XPATH, f'//*[@id="{link_element_id}"]'))).click()
-        WebDriverWait(driver, 5).until(EC.element_to_be_clickable((By.XPATH, f'//*[@id="jobDescriptionText"]')))
-        temp_results = results.find("div", id="jobDescriptionText")
-        print(d[link_element_id]['title'], d[link_element_id]['company'])
-        # print(d)
-        # print(temp_results.text.strip())
-        d[link_element_id]['desc'] = temp_results.text.strip()
+
+
+def get_job_data(driver, job_id):
+    global job_data
+    
+    if job_id[0] in job_data: # job already found from another keyword search term
+        job_data[job_id[0]]['terms'].append(job_id[1]) # add the search term used to the terms 
         
-    return d
+    else:  # new job ID
+        job_data[job_id[0]] = {}  # create empty nested dict with job id as key
+        job_data[job_id[0]]['terms'] = [] # create empty list to be appended to with search terms
+        try:
+            indeed_job_url = "https://www.indeed.com/m/basecamp/viewjob?viewtype=embdedded&jk=" + job_id[0]
+            # print(indeed_job_url)
+            driver.get(indeed_job_url)
+            # time.sleep(np.random.uniform(1, 2))
+            response = driver.page_source
+            script_tag  = re.findall(r"_initialData=(\{.+?\});", response)
+            if script_tag is not None:
+                json_blob = json.loads(script_tag[0])
+                job = json_blob["jobInfoWrapperModel"]["jobInfoModel"]
+                
+                #Getting salary info
+                # If the salary info is provided by the company itself
+                if json_blob["salaryInfoModel"] is not None: 
+                    job_data[job_id[0]]["salary_min"] = json_blob["salaryInfoModel"]["salaryMin"]
+                    job_data[job_id[0]]["salary_max"] = json_blob["salaryInfoModel"]["salaryMax"]
+                # If instead the salary is an estimate from indeed
+                elif json_blob["salaryGuideModel"]["estimatedSalaryModel"] is not None:
+                    job_data[job_id[0]]["salary_min"] = json_blob["salaryGuideModel"]["estimatedSalaryModel"]["min"]
+                    job_data[job_id[0]]["salary_max"] = json_blob["salaryGuideModel"]["estimatedSalaryModel"]["max"]
+                # If salary has none from company nor an estimate from indeed    
+                else:
+                    job_data[job_id[0]]["salary_min"] = None
+                    job_data[job_id[0]]["salary_max"] = None    
+                
+                
+                job_data[job_id[0]]['terms'].append(job_id[1]) # start the list of search terms with the term used here
+                job_data[job_id[0]]['title'] = job.get('jobInfoHeaderModel').get('jobTitle') if job.get('jobInfoHeaderModel') is not None else ''
+                job_data[job_id[0]]["company"] = job.get('jobInfoHeaderModel').get('companyName') if job.get('jobInfoHeaderModel') is not None else ''
+                temp_desc = job.get('sanitizedJobDescription').strip() if job.get('sanitizedJobDescription') is not None else '' # html string
+                no_html_desc = bs(temp_desc, 'html.parser').get_text(separator=' ').strip()
+                job_data[job_id[0]]['desc'] = no_html_desc
+                # job_data[job_id[0]]['test'] = job.get('jobDescriptionText').get('jobDescriptionText') if job.get('jobDescriptionText') is not None else ''
+                
 
-job_dict = scrape_jobs(query='python', location='remote')
+        except Exception as e:
+            print("Error", e)
+            
+            
+def dict_to_json(dict, filepath):
+    with open(filepath, "w") as out:
+        json.dump(dict, out)
+        
+        
 
+# def max # threads - remember each needs a driver
+max_threads = 10
+num_pages = 100
+num_iters = num_pages // max_threads
+keyword_list = ["python"]
+location_list = ["remote"]
+days_ago=1 # look only at jobs posted in last 24 hours
 
-with open(json_path, "w") as outfile:
-    json.dump(job_dict, outfile)
-
-# options = webdriver.FirefoxOptions()
-# driver = webdriver.Firefox(options=options)
-# driver.get("https://www.indeed.com/jobs?q=data+science&l=remote")
-
-# soup = bs(driver.page_source)
-
-# results = soup.find(id="jobsearch-Main")
-# job_elements = results.find_all("div", class_="slider_item")
-
-# basePath = "https://www.indeed.com"
-# d = {}
-# # Currently using link_element_id as unique ID.  I am fairly sure it's unique - at least it has been from what I've seen so far.
-# for job_element in job_elements[:1]:
-#     link_element_id = job_element.find_all("a")[0]["id"]
-
-#     d[link_element_id] = {}
-#     d[link_element_id]["title"] = job_element.find("h2", class_="jobTitle").text.strip()
-#     d[link_element_id]['company'] = job_element.find("span", class_="companyName").text.strip()
-#     d[link_element_id]['posted'] = job_element.find("span", class_="date").next_element.next_element.next_element
-#     try:
-#         d[link_element_id]['location'] = job_element.find("div", class_="companyLocation").text.strip()
-#     except AttributeError: 
-#         d[link_element_id]['location'] = "Not Listed"
-#     try:
-#         d[link_element_id]['salary'] = job_element.find("div", class_="metadata").text.strip()
-#     except AttributeError:
-#         d[link_element_id]['salary'] = "Not Listed"
-#     # date_element = job_element.find("div", class_="visually-hidden")  # not useful as-is.  figure out if this is possible to find at all
-
-#     WebDriverWait(driver, 2).until(EC.element_to_be_clickable((By.XPATH, f'//*[@id="{link_element_id}"]'))).click()
-
-#     time.sleep(2)
-#     temp_results = results.find("div", id='jobDescriptionText')
-#     # print(d[link_element_id]['title'], d[link_element_id]['company'])
-#     d[link_element_id]['desc'] = temp_results.text.strip()
+threads = []
+options = webdriver.FirefoxOptions()
+options.add_argument('-headless')  # remove if testing
+driver_list = [webdriver.Firefox(options=options) for x in range(0, max_threads)] # create max_threads num of drivers
+job_id_list = []
+job_data = {}
+for keyword in keyword_list:
+    for location in location_list:
+        for i in range(0, num_iters):
+            for j in range(0, max_threads):
+                offset = i*10*max_threads + j*10
+                # print(f"Searching for {keyword} in {location} on page {offset}")
+                # print(offset)
+                t = threading.Thread(args=(driver_list[j], keyword, location, offset, days_ago), target=get_job_ids) 
+                t.start()
+                threads.append(t)
+                
+                for t in threads:
+                    t.join()
+                
+for i in range(0, len(job_id_list), max_threads):
+    jobs_subset = job_id_list[i:i+10]
+    threads = []
+    for j in range(0, len(jobs_subset)):
+        # print(jobs_subset)
+        t = threading.Thread(args=(driver_list[j], jobs_subset[j]), target=get_job_data)
+        t.start()
+        threads.append(t)
+        
+        for t in threads:
+            t.join()
+            
+## Don't think I need to close this as I can instead shut down
+## The AWS instance.  Shutting them down takes ~30s so it would save a lot of time
+# for driver in driver_list:
+    # driver.quit()
