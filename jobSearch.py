@@ -5,6 +5,7 @@ import re
 from bs4 import BeautifulSoup as bs
 from urllib.parse import urlencode
 import threading
+import datetime
 
 
 
@@ -14,7 +15,10 @@ def get_url(query:str, location:str, offset=0, days_ago=1):
     return "https://www.indeed.com/jobs?" + urlencode(params)
 
 
-
+## Seems to throw lots of errors with 'Error list index out of range'
+## Presumably from looking for job searches with few pages but for some reason continuing to .get()
+## e.g. on 09/07/23 looking with (driver, 'mle', 'remote', offset, '1')
+## Had LOTS of list index out of range errors.
 def get_job_ids(driver, keyword, location, offset, days_ago):
     global job_id_list
     
@@ -95,18 +99,30 @@ def dict_to_json(dict, filepath):
 max_threads = 10
 num_pages = 100
 num_iters = num_pages // max_threads
-keyword_list = ["python"]
+keyword_list = ["data+science", "data+analysis", "data+engineer", "mle", "machine+learning", "mlops"]
 location_list = ["remote"]
 days_ago=1 # look only at jobs posted in last 24 hours
+start = time.time() # for timing
+print(f"Running Indeed Job Search")
+print(f"Using {max_threads} drivers and searching {num_pages} pages per keyword/location")
+print(f"Looking at posts in the last {days_ago} days.")
+print(f"Keywords: {keyword_list}")
+print(f"Locations: {location_list}")
 
 threads = []
 options = webdriver.FirefoxOptions()
 options.add_argument('-headless')  # remove if testing
-driver_list = [webdriver.Firefox(options=options) for x in range(0, max_threads)] # create max_threads num of drivers
+try:
+    driver_list = [webdriver.Firefox(options=options) for x in range(0, max_threads)] # create max_threads num of drivers
+    print(f"{len(driver_list)} drivers successfully created")
+except:
+    print(f"Error creating drivers")
+    
 job_id_list = []
 job_data = {}
 for keyword in keyword_list:
     for location in location_list:
+        print(f"Searching for {keyword} in {location}")
         for i in range(0, num_iters):
             for j in range(0, max_threads):
                 offset = i*10*max_threads + j*10
@@ -118,7 +134,8 @@ for keyword in keyword_list:
                 
                 for t in threads:
                     t.join()
-                
+
+print(f"Getting Job Details")                
 for i in range(0, len(job_id_list), max_threads):
     jobs_subset = job_id_list[i:i+10]
     threads = []
@@ -130,8 +147,21 @@ for i in range(0, len(job_id_list), max_threads):
         
         for t in threads:
             t.join()
-            
+
+
+end = time.time()
+
+print(f"Time to run: {(end-start)/60}m")
+date_str = datetime.datetime.now().strftime('%d-%m-%y')
+json_file_name = f"{date_str}-q-{'-'.join(keyword_list)}-l-{'-'.join(location_list)}.json"
+
+dict_to_json(job_data, json_file_name)
+print(f"New search saved to: {json_file_name}")
 ## Don't think I need to close this as I can instead shut down
 ## The AWS instance.  Shutting them down takes ~30s so it would save a lot of time
-# for driver in driver_list:
-    # driver.quit()
+try:
+    for driver in driver_list:
+        driver.quit()
+    print(f"Drivers have been closed")
+except:
+    print("Error closing drivers!")
