@@ -117,7 +117,7 @@ try:
     print(f"{len(driver_list)} drivers successfully created")
 except:
     print(f"Error creating drivers")
-    
+end_create_drivers = time.time()
 job_id_list = []
 job_data = {}
 for keyword in keyword_list:
@@ -134,7 +134,7 @@ for keyword in keyword_list:
                 
                 for t in threads:
                     t.join()
-
+end_find_jobs = time.time()
 print(f"Getting Job Details")                
 for i in range(0, len(job_id_list), max_threads):
     jobs_subset = job_id_list[i:i+10]
@@ -149,19 +149,30 @@ for i in range(0, len(job_id_list), max_threads):
             t.join()
 
 
-end = time.time()
+end_get_descs = time.time()
 
-print(f"Time to run: {(end-start)/60}m")
+
 date_str = datetime.datetime.now().strftime('%d-%m-%y')
+
+### Could add metadata inf oto json before saving it e.g. the time to run each part, time to complete, keywords used, etc.
+### Would certainly save space in the json file names doing it like that too!
 json_file_name = f"{date_str}-q-{'-'.join(keyword_list)}-l-{'-'.join(location_list)}.json"
 
 dict_to_json(job_data, json_file_name)
 print(f"New search saved to: {json_file_name}")
 ## Don't think I need to close this as I can instead shut down
 ## The AWS instance.  Shutting them down takes ~30s so it would save a lot of time
+start_shutdown_driver = time.time()
 try:
     for driver in driver_list:
         driver.quit()
     print(f"Drivers have been closed")
 except:
     print("Error closing drivers!")
+end_shutdown_driver = time.time()
+    
+print(f"Starting the drivers took {end_create_drivers - start}s, "
+      f"Finding the jobs took {(end_find_jobs - end_create_drivers)/60}m, "
+      f"Getting the job descriptions took {(end_get_descs - end_find_jobs)/60}m, "
+      f"So in total this took {end_get_descs - start}m if we don't have to shut down the drivers.\n"
+      f"If we do have to shut down the drivers, it adds on another {end_shutdown_driver - start_shutdown_driver}s")
