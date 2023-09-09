@@ -5,7 +5,7 @@ import os
 from collections import Counter, defaultdict
 import datetime
 
-load_dotenv
+load_dotenv()
 api_key = os.getenv("openai_api_key")
 example_text_1 = os.getenv("example_text_1")
 example_text_2 = os.getenv("example_text_2")

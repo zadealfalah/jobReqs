@@ -6,7 +6,8 @@ from bs4 import BeautifulSoup as bs
 from urllib.parse import urlencode
 import threading
 import datetime
-
+import os
+from dotenv import load_dotenv
 
 
 
@@ -32,7 +33,7 @@ def get_job_ids(driver, keyword, location, offset, days_ago):
             json_blob = json.loads(script_tag[0])
             jobs_list = json_blob['metaData']['mosaicProviderJobCardsModel']['results']
             for i, job in enumerate(jobs_list):
-                if job.get('jobkey') is not None:
+                if (job.get('jobkey') is not None) & (job.get('jobkey') not in job_id_list):
                     job_id_list.append((job.get('jobkey'), keyword))
             # if len(jobs_list) < 10:
             #     break
@@ -44,8 +45,15 @@ def get_job_ids(driver, keyword, location, offset, days_ago):
 def get_job_data(driver, job_id):
     global job_data
     
-    if job_id[0] in job_data: # job already found from another keyword search term
-        job_data[job_id[0]]['terms'].append(job_id[1]) # add the search term used to the terms 
+    # If the job id is already in job_data
+    if job_id[0] in job_data:
+        # For some reason I am getting job_data[jobid[0]]['terms'] with duplicated terms e.g. ['data analyst', 'machine learning', 'machine learning']
+        # No idea why.  Threading issue?  To avoid this for now will explicitly only allow non-duplicated terms
+        # I think it may be because of things like pg 43 being last page of a search but pg 44+ returning the same results. below if-pass should fix it for now.
+        if job_id[1] in job_data[job_id[0]]['terms']:
+            pass
+        else:
+            job_data[job_id[0]]['terms'].append(job_id[1]) # add the search term used to the terms 
         
     else:  # new job ID
         job_data[job_id[0]] = {}  # create empty nested dict with job id as key
@@ -75,7 +83,6 @@ def get_job_data(driver, job_id):
                     job_data[job_id[0]]["salary_min"] = None
                     job_data[job_id[0]]["salary_max"] = None    
                 
-                
                 job_data[job_id[0]]['terms'].append(job_id[1]) # start the list of search terms with the term used here
                 job_data[job_id[0]]['title'] = job.get('jobInfoHeaderModel').get('jobTitle') if job.get('jobInfoHeaderModel') is not None else ''
                 job_data[job_id[0]]["company"] = job.get('jobInfoHeaderModel').get('companyName') if job.get('jobInfoHeaderModel') is not None else ''
@@ -93,15 +100,17 @@ def dict_to_json(dict, filepath):
     with open(filepath, "w") as out:
         json.dump(dict, out)
         
-        
+
+load_dotenv()        
 
 # def max # threads - remember each needs a driver
-max_threads = 10
-num_pages = 100
+max_threads = int(os.getenv("max_threads"))
+num_pages = int(os.getenv("num_pages"))
 num_iters = num_pages // max_threads
-keyword_list = ["data+science", "data+analysis", "data+engineer", "mle", "machine+learning", "mlops"]
-location_list = ["remote"]
-days_ago=1 # look only at jobs posted in last 24 hours
+keyword_list = json.loads(os.getenv("keyword_list"))
+location_list = json.loads(os.getenv("location_list"))
+days_ago = os.getenv("days_ago")
+
 start = time.time() # for timing
 print(f"Running Indeed Job Search")
 print(f"Using {max_threads} drivers and searching {num_pages} pages per keyword/location")
@@ -122,11 +131,11 @@ job_id_list = []
 job_data = {}
 for keyword in keyword_list:
     for location in location_list:
-        print(f"Searching for {keyword} in {location}")
+        # print(f"Searching for {keyword} in {location}")
         for i in range(0, num_iters):
             for j in range(0, max_threads):
                 offset = i*10*max_threads + j*10
-                # print(f"Searching for {keyword} in {location} on page {offset}")
+                print(f"Searching for {keyword} in {location} on page {int((offset/10)+1)}")
                 # print(offset)
                 t = threading.Thread(args=(driver_list[j], keyword, location, offset, days_ago), target=get_job_ids) 
                 t.start()
@@ -135,6 +144,7 @@ for keyword in keyword_list:
                 for t in threads:
                     t.join()
 end_find_jobs = time.time()
+print(f"Found {len(job_id_list)} jobs.")
 print(f"Getting Job Details")                
 for i in range(0, len(job_id_list), max_threads):
     jobs_subset = job_id_list[i:i+10]
@@ -152,11 +162,26 @@ for i in range(0, len(job_id_list), max_threads):
 end_get_descs = time.time()
 
 
-date_str = datetime.datetime.now().strftime('%d-%m-%y')
+date_info = datetime.datetime.now()
+date_str = date_info.strftime('%d-%m-%y')
+full_time_str = date_info.strftime('%H:%M:%S-%d-%m-%y')
 
-### Could add metadata inf oto json before saving it e.g. the time to run each part, time to complete, keywords used, etc.
+### Could add metadata inf on to json before saving it e.g. the time to run each part, time to complete, keywords used, etc.
 ### Would certainly save space in the json file names doing it like that too!
-json_file_name = f"{date_str}-q-{'-'.join(keyword_list)}-l-{'-'.join(location_list)}.json"
+
+job_data["metadata"] = {}
+job_data["metadata"]["keywords"] = keyword_list
+job_data["metadata"]["locations"] = location_list
+job_data["metadata"]["time_ran"] = full_time_str
+job_data["metadata"]["num_jobs"] = len(job_id_list)
+
+job_data["metadata"]["timings"] = {}
+job_data["metadata"]["timings"]["start_drivers"] = (end_create_drivers - start)
+job_data["metadata"]["timings"]["find_job_ids"] = (end_find_jobs - end_create_drivers)
+job_data["metadata"]["timings"]["get_job_descs"] = (end_get_descs - end_find_jobs)
+
+
+json_file_name = fr"data/raw_data-{date_str}.json"
 
 dict_to_json(job_data, json_file_name)
 print(f"New search saved to: {json_file_name}")
