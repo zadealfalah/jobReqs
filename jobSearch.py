@@ -10,7 +10,7 @@ import os
 from dotenv import load_dotenv
 
 from utils import get_url, dict_to_json, get_job_ids, get_job_data
-from globals import init
+from globals import k
         
 
 load_dotenv()        
@@ -23,7 +23,9 @@ keyword_list = json.loads(os.getenv("keyword_list"))
 location_list = json.loads(os.getenv("location_list"))
 days_ago = os.getenv("days_ago")
 
-init() #init the global job_data and job_id_list variables
+# init() #init the global job_data and job_id_list variables
+job_data =k["job_data"]
+job_id_list=k['job_id_list']
 
 start = time.time() # for timing
 print(f"Running Indeed Job Search")
@@ -61,10 +63,10 @@ for keyword in keyword_list:
                     
 end_find_jobs = time.time()
 
-print(f"Found {len(init.job_id_list)} jobs.")
+print(f"Found {len(job_id_list)} jobs.")
 print(f"Getting Job Details")                
-for i in range(0, len(init.job_id_list), max_threads):
-    jobs_subset = init.job_id_list[i:i+10]
+for i in range(0, len(job_id_list), max_threads):
+    jobs_subset = job_id_list[i:i+10]
     threads = []
     for j in range(0, len(jobs_subset)):
         # print(jobs_subset)
@@ -86,21 +88,21 @@ full_time_str = date_info.strftime('%H:%M:%S-%d-%m-%y')
 ### Could add metadata inf on to json before saving it e.g. the time to run each part, time to complete, keywords used, etc.
 ### Would certainly save space in the json file names doing it like that too!
 
-init.job_data["metadata"] = {}
-init.job_data["metadata"]["keywords"] = keyword_list
-init.job_data["metadata"]["locations"] = location_list
-init.job_data["metadata"]["time_ran"] = full_time_str
-init.job_data["metadata"]["num_jobs"] = len(init.job_id_list)
+job_data["metadata"] = {}
+job_data["metadata"]["keywords"] = keyword_list
+job_data["metadata"]["locations"] = location_list
+job_data["metadata"]["time_ran"] = full_time_str
+job_data["metadata"]["num_jobs"] = len(job_id_list)
 
-init.job_data["metadata"]["timings"] = {}
-init.job_data["metadata"]["timings"]["start_drivers"] = (end_create_drivers - start)
-init.job_data["metadata"]["timings"]["find_job_ids"] = (end_find_jobs - end_create_drivers)
-init.job_data["metadata"]["timings"]["get_job_descs"] = (end_get_descs - end_find_jobs)
+job_data["metadata"]["timings"] = {}
+job_data["metadata"]["timings"]["start_drivers"] = (end_create_drivers - start)
+job_data["metadata"]["timings"]["find_job_ids"] = (end_find_jobs - end_create_drivers)
+job_data["metadata"]["timings"]["get_job_descs"] = (end_get_descs - end_find_jobs)
 
 
 json_file_name = fr"data/raw_data-{date_str}.json"
 
-dict_to_json(init.job_data, json_file_name)
+dict_to_json(job_data, json_file_name)
 print(f"New search saved to: {json_file_name}")
 ## Don't think I need to close this as I can instead shut down
 ## The AWS instance.  Shutting them down takes ~30s so it would save a lot of time

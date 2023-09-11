@@ -4,3 +4,7 @@ def init():
     global job_data
     job_id_list = []
     job_data = {}
+
+
+
+k = {"job_id_list":[], "job_data":{}}
