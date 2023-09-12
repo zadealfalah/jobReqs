@@ -122,12 +122,12 @@ def ask_gpt(text, example_text_1=os.getenv("example_text_1"), example_text_2=os.
     response = openai.ChatCompletion.create(
         model="gpt-3.5-turbo",
         messages=[
-            {"role":"system", "content":"You identify specific technology names from job descriptions.  Respond only with a list of the names of the specific technologies."},
-            {"role":"user", "content":f"Report the specific technologies in the following text as a list: {example_text_1}"},
+            {"role":"system", "content":"You identify specific technologies from texts."},
+            {"role":"user", "content":f"Report ONLY specific tools and technologies from the following text.  Do not return generics like 'data processing' or 'generative models': {example_text_1}"},
             {"role":"assistant", "content":f"{example_response_1}"},
-            {"role":"user", "content":f"Report the specific technologies in the following text as a list: {example_text_2}"},
+            {"role":"user", "content":f"Report ONLY specific tools and technologies from the following text.  Do not return generics like 'data processing' or 'generative models': {example_text_2}"},
             {"role":"assistant", "content":f"{example_response_2}"},
-            {"role":"user", "content":f"Report the specific technologies in the following text as a list: {text}"}
+            {"role":"user", "content":f"Report ONLY specific tools and technologies from the following text.  Do not return generics like 'data processing' or 'generative models': {text}"}
         ]
     )
     return response
