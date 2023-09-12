@@ -8,6 +8,10 @@ import threading
 import datetime
 import os
 from dotenv import load_dotenv
+import openai
+import numpy as np
+from tenacity import retry, stop_after_attempt, wait_random_exponential
+
 
 from globals import k
 
@@ -94,3 +98,73 @@ def get_job_data(driver, job_id):
 
         except Exception as e:
             print("Error", e)
+            
+            
+def check_for_techs(text, vectorizer, clf, nlp, n=5):
+    original_text = text
+    
+    # Don't use split function as we don't want the output I use to label them manually.
+    splits = text.count("\n")//n
+    split_text = re.findall("\n".join(["[^\n]+"]*splits), original_text)
+    processed = [" ".join([token.lemma_ for token in nlp(para)]) for para in split_text]
+    
+    transformed = vectorizer.transform(processed)
+    pred_vals = clf.predict(transformed)
+    
+    zipped_paras = list(zip(split_text, pred_vals))
+    # return(zipped_paras)
+    return " ".join([text for (text, label) in zipped_paras if label == 1])
+
+
+
+
+def ask_gpt(text, example_text_1=os.getenv("example_text_1"), example_text_2=os.getenv("example_text_2"), example_response_1=os.getenv("example_response_1"), example_response_2=os.getenv("example_response_2")):
+    response = openai.ChatCompletion.create(
+        model="gpt-3.5-turbo",
+        messages=[
+            {"role":"system", "content":"You identify specific technology names from job descriptions.  Respond only with a list of the names of the specific technologies."},
+            {"role":"user", "content":f"Report the specific technologies in the following text as a list: {example_text_1}"},
+            {"role":"assistant", "content":f"{example_response_1}"},
+            {"role":"user", "content":f"Report the specific technologies in the following text as a list: {example_text_2}"},
+            {"role":"assistant", "content":f"{example_response_2}"},
+            {"role":"user", "content":f"Report the specific technologies in the following text as a list: {text}"}
+        ]
+    )
+    return response
+
+
+def print_attempt_number(retry_state):
+    print(f"Retrying: {retry_state.attempt_number}...")
+@retry(wait=wait_random_exponential(min=1, max=60), stop=stop_after_attempt(6), after=print_attempt_number)
+def get_job_techs(data, key, keylist, roughly_split):
+    if key.startswith("metadata"):
+        return #metadata key, ignore it
+    if key in roughly_split:
+        print(f"~{(roughly_split.index(key)+1)*10}% done")
+
+    if len(data[key]["cleaned_desc"]) > 1: #there are jds that seemed to contain no techs after classifier, ignore those
+        data[key]["techs"] = [x.lower() for x in ask_gpt(data[key]["cleaned_desc"])["choices"][0]["message"]["content"].split(", ")]
+        # print(data[key]["techs"])
+    else:
+        data[key]["techs"] = ""
+        
+        
+def update_tech_json(datapath="data", prefix='p-', startstr="raw_data"):
+    for filename in os.listdir(datapath):
+        if filename.startswith(startstr): # just with one file at first
+            print(f"Processing {filename}")
+            filepath = fr"data/{filename}"
+            with open(filepath) as f:
+                data = json.load(f)
+            keylist = list(data.keys())
+            print(f"There are {len(keylist)-1} jobs in {filename}")
+            roughly_split = [x[-1] for x in np.array_split(np.array(keylist[:-1]), 10)]
+            for key in keylist:
+                # print(f"Before: {key}, \n {data[key]['techs']}")
+                #Formatted like this so that the retrys are by-key rather than by-file
+                get_job_techs(data, key, keylist, roughly_split)
+                # print(f"After: {data[key]['techs']}")
+            dict_to_json(data, fr"{datapath}/{filename}") #after going through all keys, update the json file
+            
+            os.rename(fr"{datapath}/{filename}", fr"{datapath}/{prefix}{filename}") #update the filename with p- to show it's been processed
+            print(f"{filepath} renamed to {datapath}/{prefix}{filename}")
