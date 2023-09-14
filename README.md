@@ -1,8 +1,8 @@
 # jobReqs - Python, AWS, openAI
 
 ## Table of Contents
-*[General Info](#general-info)
-*[To Do](#to-do)
+* [General Info](#general-info)
+* [To Do](#to-do)
 
 ## General Info
 This project utilizes Selenium to pull daily job data from Indeed.  The data is stored in Amazon S3 buckets as .json files and the job descriptions are analyzed with the openAI API to find skills and technologies that are sought after.
