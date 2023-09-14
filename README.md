@@ -11,4 +11,4 @@ Currently searching for remote jobs with the following keywords: "data science",
 ## To Do
 - Create MWAA workflow on AWS
 - Train spaCy model with openAI results
- 
+- Create visualizations of results
