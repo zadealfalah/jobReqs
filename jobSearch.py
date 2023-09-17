@@ -120,5 +120,5 @@ end_shutdown_driver = time.time()
 print(f"Starting the drivers took {round(end_create_drivers - start,2)}s, "
       f"Finding the jobs took {round((end_find_jobs - end_create_drivers)/60,2)}m, "
       f"Getting the job descriptions took {round((end_get_descs - end_find_jobs)/60,2)}m, "
-      f"So in total this took {round(end_get_descs - start,2)}m if we don't have to shut down the drivers.\n"
+      f"So in total this took {round((end_get_descs - start)/60,2)}m if we don't have to shut down the drivers.\n"
       f"If we do have to shut down the drivers, it adds on another {round(end_shutdown_driver - start_shutdown_driver,2)}s")
