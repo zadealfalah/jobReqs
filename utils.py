@@ -172,6 +172,10 @@ def update_tech_json(datapath="data", prefix='p-', startstr="raw_data"):
                     prefix = 'np-' # change prefix to show this file had at least one error occur
                 time.sleep(2) # add sleep see if it fixes the timeouts.
                 # print(f"After: {data[key]['techs']}")
+                
+            # data['metadata']['gpt'] = {}   #should add the gpt metadata to this after making it all into env vars for ask_gpt()
+            # data['metadata']['gpt']['prompt']
+            
             dict_to_json(data, fr"{datapath}/{filename}") #after going through all keys, update the json file
             
             try:
