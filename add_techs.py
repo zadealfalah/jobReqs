@@ -38,6 +38,7 @@ for filename in os.listdir("data"):
             if key.startswith("metadata"):
                 continue
             else:
+                print(data[key])
                 cleaned_jd = check_for_techs(data[key]['desc'], tfidf_vectorizer, clf, nlp, 5)
                 data[key]["cleaned_desc"] = cleaned_jd
         data["metadata"]["models"]["classifier"]["clf"] = saved_clf

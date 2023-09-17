@@ -51,6 +51,7 @@ for keyword in keyword_list:
         # print(f"Searching for {keyword} in {location}")
         for i in range(0, num_iters):
             for j in range(0, max_threads):
+                old_jobs_flag = False  # flag to break multiple loops if jobs repeat
                 offset = i*10*max_threads + j*10
                 print(f"Searching for {keyword} in {location} on page {int((offset/10)+1)}")
                 # print(offset)
@@ -60,7 +61,8 @@ for keyword in keyword_list:
                 
                 for t in threads:
                     t.join()
-                    
+# print(f"Threads results:")
+# print([thread.result() for thread in threads]) #doesn't work, how to set the old_jobs_flag with a thread??
 end_find_jobs = time.time()
 
 print(f"Found {len(job_id_list)} jobs.")

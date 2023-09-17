@@ -37,11 +37,13 @@ def get_job_ids(driver, keyword, location, offset, days_ago):
         if script_tag is not None:
             json_blob = json.loads(script_tag[0])
             jobs_list = json_blob['metaData']['mosaicProviderJobCardsModel']['results']
+            new_jobs_list = [] #Store the new jobs for this run alone, used to find when pages are repeating
             for i, job in enumerate(jobs_list):
+                new_jobs_list.append(job)
                 if (job.get('jobkey') is not None) & (job.get('jobkey') not in job_id_list):
                     job_id_list.append((job.get('jobkey'), keyword))
-            # if len(jobs_list) < 10:
-            #     break
+        
+        return new_jobs_list
     except Exception as e:
         print("Error", e)
         
