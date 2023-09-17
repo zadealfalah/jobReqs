@@ -24,6 +24,7 @@ with open(saved_clf, "rb") as model_file:
 with open(saved_tfidf, "rb") as vect_file:
     tfidf_vectorizer = pickle.load(vect_file)
 
+
 nlp = spacy.load("en_core_web_sm")
 
 
@@ -37,12 +38,20 @@ for filename in os.listdir("data"):
         for key in list(data.keys()):
             if key.startswith("metadata"):
                 continue
+            elif "desc" not in data[key]: #load-in got broken, remove the job
+                del data[key]
             else:
-                print(data[key])
+               # print(data[key])
+               try:
                 cleaned_jd = check_for_techs(data[key]['desc'], tfidf_vectorizer, clf, nlp, 5)
                 data[key]["cleaned_desc"] = cleaned_jd
+               except Exception as e:
+                   print(f"Error: {e}")
+        data["metadata"]["models"] = {}
+        data["metadata"]["models"]["classifier"] = {}
         data["metadata"]["models"]["classifier"]["clf"] = saved_clf
         data["metadata"]["models"]["classifier"]["tfidf"] = saved_tfidf
+        data["metadata"]["models"]["NER"] = {}
         data["metadata"]["models"]["NER"] = "gpt-3.5-turbo"  # currently only using gpt
         # after I train my spacy NER model will be using just that so having it be static now is fine.
         dict_to_json(data, fr"data/{filename}")
@@ -54,4 +63,5 @@ print("Finished shortening JDs.")
 openai.api_key = api_key
 print(f"Beginning tech identification")
 #This line just goes through all files in os.listdir("data") which start with "raw_data", renaming the file with a "p-" prefix after.
+
 update_tech_json("data", "p-", "raw_data")

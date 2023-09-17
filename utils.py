@@ -115,8 +115,8 @@ def check_for_techs(text, vectorizer, clf, nlp, n=5):
     
     zipped_paras = list(zip(split_text, pred_vals))
     # return(zipped_paras)
-    return " ".join([text for (text, label) in zipped_paras if label == 1])
-
+    cleaned = " ".join([text for (text, label) in zipped_paras if label == 1])
+    return cleaned.strip("\n")  # add on stripping the newlines from the cleaned descs to lower # tokens
 
 
 
@@ -124,12 +124,12 @@ def ask_gpt(text, example_text_1=os.getenv("example_text_1"), example_text_2=os.
     response = openai.ChatCompletion.create(
         model="gpt-3.5-turbo",
         messages=[
-            {"role":"system", "content":"You identify specific technologies from texts."},
-            {"role":"user", "content":f"Report ONLY specific tools and technologies from the following text.  Do not return generics like 'data processing' or 'generative models': {example_text_1}"},
+            {"role":"system", "content":"You list specific technologies from texts separated by commas."},
+            {"role":"user", "content":f"Report ONLY specific tools and technologies from the following text as a comma separated list.  Do not return generics like 'data processing': {example_text_1}"},
             {"role":"assistant", "content":f"{example_response_1}"},
-            {"role":"user", "content":f"Report ONLY specific tools and technologies from the following text.  Do not return generics like 'data processing' or 'generative models': {example_text_2}"},
+            {"role":"user", "content":f"Report ONLY specific tools and technologies from the following text as a comma separated list.  Do not return generics like 'data processing': {example_text_2}"},
             {"role":"assistant", "content":f"{example_response_2}"},
-            {"role":"user", "content":f"Report ONLY specific tools and technologies from the following text.  Do not return generics like 'data processing' or 'generative models': {text}"}
+            {"role":"user", "content":f"Report ONLY specific tools and technologies from the following text as a comma separated list.  Do not return generics like 'data processing': {text}"}
         ]
     )
     return response
@@ -143,7 +143,8 @@ def get_job_techs(data, key, keylist, roughly_split):
         return #metadata key, ignore it
     if key in roughly_split:
         print(f"~{(roughly_split.index(key)+1)*10}% done")
-
+    if "cleaned_desc" not in data[key]: #no cleaned desc as loading in desc failed
+        del data[key]
     if len(data[key]["cleaned_desc"]) > 1: #there are jds that seemed to contain no techs after classifier, ignore those
         data[key]["techs"] = [x.lower() for x in ask_gpt(data[key]["cleaned_desc"])["choices"][0]["message"]["content"].split(", ")]
         # print(data[key]["techs"])
@@ -164,9 +165,20 @@ def update_tech_json(datapath="data", prefix='p-', startstr="raw_data"):
             for key in keylist:
                 # print(f"Before: {key}, \n {data[key]['techs']}")
                 #Formatted like this so that the retrys are by-key rather than by-file
-                get_job_techs(data, key, keylist, roughly_split)
+                try:
+                    get_job_techs(data, key, keylist, roughly_split)
+                except Exception as e:
+                    print(f"Error getting tech list: {e}")
+                    prefix = 'np-' # change prefix to show this file had at least one error occur
+                time.sleep(2) # add sleep see if it fixes the timeouts.
                 # print(f"After: {data[key]['techs']}")
             dict_to_json(data, fr"{datapath}/{filename}") #after going through all keys, update the json file
             
-            os.rename(fr"{datapath}/{filename}", fr"{datapath}/{prefix}{filename}") #update the filename with p- to show it's been processed
-            print(f"{filepath} renamed to {datapath}/{prefix}{filename}")
+            try:
+                os.rename(fr"{datapath}/{filename}", fr"{datapath}/{prefix}{filename}") #update the filename with p- to show it's been processed
+                print(f"{filepath} renamed to {datapath}/{prefix}{filename}")
+            except FileExistsError as e:
+                print(f"File {datapath}/{prefix}{filename} already exists")
+                print(f"Saving as {datapath}/{prefix}{filename}-1")
+                os.rename(fr"{datapath}/{filename}", fr"{datapath}/{prefix}{filename}-1")
+                print(f"{filepath} renamed to {datapath}/{prefix}{filename}-1")
