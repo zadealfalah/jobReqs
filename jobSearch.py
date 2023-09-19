@@ -65,7 +65,7 @@ for keyword in keyword_list:
 # print([thread.result() for thread in threads]) #doesn't work, how to set the old_jobs_flag with a thread??
 end_find_jobs = time.time()
 
-print(f"Found {len(job_id_list)} jobs.")
+print(f"Found {len(job_id_list)} job combos.")
 print(f"Getting Job Details")                
 for i in range(0, len(job_id_list), max_threads):
     jobs_subset = job_id_list[i:i+10]
@@ -79,7 +79,7 @@ for i in range(0, len(job_id_list), max_threads):
         for t in threads:
             t.join()
 
-
+print(f"Searched for {len(job_data.keys())} job descriptions.")
 end_get_descs = time.time()
 
 
@@ -94,7 +94,7 @@ job_data["metadata"] = {}
 job_data["metadata"]["keywords"] = keyword_list
 job_data["metadata"]["locations"] = location_list
 job_data["metadata"]["time_ran"] = full_time_str
-job_data["metadata"]["num_jobs"] = len(job_id_list)
+job_data["metadata"]["num_jobs"] = len(job_data.keys())
 
 job_data["metadata"]["timings"] = {}
 job_data["metadata"]["timings"]["start_drivers"] = (end_create_drivers - start)
