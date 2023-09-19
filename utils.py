@@ -186,3 +186,38 @@ def update_tech_json(datapath="data", prefix='p-', startstr="raw_data"):
                 print(f"Saving as {datapath}/{prefix}{filename}-1")
                 os.rename(fr"{datapath}/{filename}", fr"{datapath}/{prefix}{filename}-1")
                 print(f"{filepath} renamed to {datapath}/{prefix}{filename}-1")
+                
+                
+
+def remove_processing(filepath, delete_processed = True):
+    """Used to remove processing leaving only the raw data for reuse.
+
+    Args:
+        filepath (_type_): _description_
+    """
+    with open(filepath) as f:
+        data = json.load(f)
+    for key in data.keys():
+        try:
+            del data[key]["cleaned_desc"]
+        except:
+            print(f"{key} has no cleaned desc")
+            continue
+        try:
+            del data[key]["techs"]
+        except:
+            print(f"{key} has no techs")
+            continue
+        if key == "metadata":
+            try:
+                del data[key]["models"]
+            except:
+                print(f"{key} has no metadata models")
+                continue
+    unprocessed_str = filepath.replace("p-", "")
+    dict_to_json(data, unprocessed_str)
+    if delete_processed == True:
+        os.remove(filepath)
+        print(f"File {filepath} has been removed, and file {unprocessed_str} has been recreated.")
+    else:
+        print(f"File {unprocessed_str} has been recreated.  The original file {filepath} was not deleted.")
