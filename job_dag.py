@@ -1,11 +1,17 @@
 from airflow import DAG
 from datetime import datetime, timedelta
-from airflow.operators import BashOperator, PythonOperator
+from airflow.operators import PythonOperator
 from airflow.utils.dates import days_ago
+import boto3
 
 import os
 from dotenv import load_dotenv
 load_dotenv()
+
+aws_access_key_id = os.getenv("aws_access_key_id")
+aws_secret_access_key = os.getenv("aws_secret_access_key")
+aws_region = os.getenv("region_name")
+
 
 
 default_args = {

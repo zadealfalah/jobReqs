@@ -8,6 +8,7 @@ import threading
 import datetime
 import os
 from dotenv import load_dotenv
+import boto3 # Add for AWS upload
 
 from utils import get_url, dict_to_json, get_job_ids, get_job_data
 from globals import k
@@ -102,23 +103,36 @@ job_data["metadata"]["timings"]["find_job_ids"] = (end_find_jobs - end_create_dr
 job_data["metadata"]["timings"]["get_job_descs"] = (end_get_descs - end_find_jobs)
 
 
-json_file_name = fr"data/raw_data-{date_str}.json"
+json_file_name = fr"raw_data-{date_str}.json"
 
-dict_to_json(job_data, json_file_name)
-print(f"New search saved to: {json_file_name}")
-## Don't think I need to close this as I can instead shut down
-## The AWS instance.  Shutting them down takes ~30s so it would save a lot of time
-start_shutdown_driver = time.time()
-try:
-    for driver in driver_list:
-        driver.quit()
-    print(f"Drivers have been closed")
-except:
-    print("Error closing drivers!")
-end_shutdown_driver = time.time()
+# dict_to_json(job_data, json_file_name)
+# print(f"New search saved to: {json_file_name}")
+# When running locally, I used dict_to_json(job_data, json_file_name)
+# Now that we are using MWAA and Lambda on AWS, we must change it.
+
+# new env vars for aws
+region_name = os.getenv("region_name")
+bucket_name = os.getenv("bucket_name")
+object_key = fr"data/{json_file_name}"
+
+
+s3 = boto3.client("s3", region_name=region_name)
+s3.put_object(Bucket=bucket_name, Key=object_key, Body=job_data)
+print(f"JSON data saved to S3 bucket '{bucket_name}' with object key '{object_key}'")
+
+
+## ChatGPT at least says that shutting down drivers isn't necessary with Lambda.  
+# start_shutdown_driver = time.time()
+# try:
+#     for driver in driver_list:
+#         driver.quit()
+#     print(f"Drivers have been closed")
+# except:
+#     print("Error closing drivers!")
+# end_shutdown_driver = time.time()
     
 print(f"Starting the drivers took {round(end_create_drivers - start,2)}s, "
       f"Finding the jobs took {round((end_find_jobs - end_create_drivers)/60,2)}m, "
       f"Getting the job descriptions took {round((end_get_descs - end_find_jobs)/60,2)}m, "
-      f"So in total this took {round((end_get_descs - start)/60,2)}m if we don't have to shut down the drivers.\n"
-      f"If we do have to shut down the drivers, it adds on another {round(end_shutdown_driver - start_shutdown_driver,2)}s")
+      f"So in total this took {round((end_get_descs - start)/60,2)}m if we don't have to shut down the drivers.\n")
+    #   f"If we do have to shut down the drivers, it adds on another {round(end_shutdown_driver - start_shutdown_driver,2)}s")
