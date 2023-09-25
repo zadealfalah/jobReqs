@@ -7,10 +7,10 @@ from urllib.parse import urlencode
 import threading
 import datetime
 import os
-from dotenv import load_dotenv
-import openai
-import numpy as np
-from tenacity import retry, stop_after_attempt, wait_random_exponential
+# from dotenv import load_dotenv
+# import openai
+# import numpy as np
+# from tenacity import retry, stop_after_attempt, wait_random_exponential
 
 
 from globals import k
@@ -20,9 +20,9 @@ def get_url(query:str, location:str, offset=0, days_ago=1):
     params = {"q":query, "l":location, "filter":0, "start":offset, "fromage":days_ago}
     return "https://www.indeed.com/jobs?" + urlencode(params)
 
-# def dict_to_json(dict, filepath):
-#     with open(filepath, "w") as out:
-#         json.dump(dict, out)
+def dict_to_json(dict, filepath):
+    with open(filepath, "w") as out:
+        json.dump(dict, out)
 
 
 def get_job_ids(driver, keyword, location, offset, days_ago):
