@@ -46,8 +46,8 @@ def lambda_handler(event, context):
     try:
         driver_list = [webdriver.Firefox(options=options) for x in range(0, max_threads)] # create max_threads num of drivers
         print(f"{len(driver_list)} drivers successfully created")
-    except:
-        print(f"Error creating drivers")
+    except Exception as e:
+        print(f"Error creating drivers: {e}")
     end_create_drivers = time.time()
     # job_id_list = init.job_id_list
     # job_data = init.job_data
