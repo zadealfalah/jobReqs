@@ -9,7 +9,7 @@ import datetime
 import os
 import boto3 # Add for AWS upload
 
-from utils import get_url, dict_to_json, get_job_ids, get_job_data
+from utils import get_url, get_job_ids, get_job_data
 from globals import k
              
 # To be used with a cloudwatch scheduler.  
@@ -39,6 +39,7 @@ print(f"Locations: {location_list}")
 threads = []
 options = webdriver.FirefoxOptions()
 options.add_argument('-headless')  # remove if testing
+options.add_argument('-user-data-dir=/tmp')
 
 s3 = boto3.client("s3", region_name=region_name)
 
@@ -114,6 +115,7 @@ def lambda_handler(event, context):
     # print(f"New search saved to: {json_file_name}")
     # When running locally, I used dict_to_json(job_data, json_file_name)
     # Now that we are using MWAA and Lambda on AWS, we must change it.
+    json_job_data = json.dumps(job_data)
 
     # new env vars for aws
     region_name = os.environ["region_name"]
@@ -121,7 +123,7 @@ def lambda_handler(event, context):
     object_key = fr"data/{json_file_name}"
 
 
-    s3.put_object(Bucket=bucket_name, Key=object_key, Body=job_data)
+    s3.put_object(Bucket=bucket_name, Key=object_key, Body=json_job_data)
     print(f"JSON data saved to S3 bucket '{bucket_name}' with object key '{object_key}'")
 
 
