@@ -39,6 +39,7 @@ print(f"Locations: {location_list}")
 threads = []
 options = webdriver.FirefoxOptions()
 options.add_argument('-headless')  # remove if testing
+options.add_argument('-user-data-dir=/tmp')
 
 s3 = boto3.client("s3", region_name=region_name)
 
