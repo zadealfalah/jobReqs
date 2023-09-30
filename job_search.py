@@ -1,4 +1,5 @@
 from selenium import webdriver
+from selenium.webdriver.chrome.options import Options
 import time
 import json
 import re
@@ -16,36 +17,41 @@ from globals import k
 # Called lambda_function.py in AWS
 
 
-
-# def max # threads - remember each needs a driver
-max_threads = int(os.environ["max_threads"])
-num_pages = int(os.environ["num_pages"])
-num_iters = num_pages // max_threads
-keyword_list = json.loads(os.environ["keyword_list"])
-location_list = json.loads(os.environ["location_list"])
-days_ago = os.environ["days_ago"]
-region_name = os.environ["region_name"]
-
-job_data =k["job_data"]
-job_id_list=k['job_id_list']
-
-start = time.time() # for timing
-print(f"Running Indeed Job Search")
-print(f"Using {max_threads} drivers and searching {num_pages} pages per keyword/location")
-print(f"Looking at posts in the last {days_ago} days.")
-print(f"Keywords: {keyword_list}")
-print(f"Locations: {location_list}")
-
-threads = []
-options = webdriver.FirefoxOptions()
-options.add_argument('-headless')  # remove if testing
-options.add_argument('-user-data-dir=/tmp')
-
-s3 = boto3.client("s3", region_name=region_name)
-
 def lambda_handler(event, context):
+    
+    # def max # threads - remember each needs a driver
+    max_threads = int(os.environ["max_threads"])
+    num_pages = int(os.environ["num_pages"])
+    num_iters = num_pages // max_threads
+    keyword_list = json.loads(os.environ["keyword_list"])
+    location_list = json.loads(os.environ["location_list"])
+    days_ago = os.environ["days_ago"]
+    region_name = os.environ["region_name"]
+    
+    job_data =k["job_data"]
+    job_id_list=k['job_id_list']
+    
+    start = time.time() # for timing
+    print(f"Running Indeed Job Search")
+    print(f"Using {max_threads} drivers and searching {num_pages} pages per keyword/location")
+    print(f"Looking at posts in the last {days_ago} days.")
+    print(f"Keywords: {keyword_list}")
+    print(f"Locations: {location_list}")
+    
+    threads = []
+    options = Options()
+    options.binary_location = '/opt/headless-chromium'
+    options.add_argument('--headless')
+    options.add_argument('--no-sandbox')
+    options.add_argument('--single-process')
+    options.add_argument('--disable-dev-shm-usage')
+    
+    s3 = boto3.client("s3", region_name=region_name)
+
+
+    
     try:
-        driver_list = [webdriver.Firefox(options=options) for x in range(0, max_threads)] # create max_threads num of drivers
+        driver_list = [webdriver.Chrome('/opt/chromedriver',chrome_options=options) for x in range(0, max_threads)] # create max_threads num of drivers
         print(f"{len(driver_list)} drivers successfully created")
     except Exception as e:
         print(f"Error creating drivers: {e}")
