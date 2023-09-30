@@ -1,4 +1,5 @@
 from selenium import webdriver
+from selenium.webdriver.firefox.options import Options
 import time
 import json
 import re
@@ -35,8 +36,12 @@ print(f"Keywords: {keyword_list}")
 print(f"Locations: {location_list}")
 
 threads = []
-options = webdriver.FirefoxOptions()
-options.add_argument('-headless')  # remove if testing
+options = Options()
+options.add_argument('--headless')
+options.add_argument('--no-sandbox')
+options.add_argument('--single-process')
+options.add_argument('--disable-dev-shm-usage')
+
 try:
     driver_list = [webdriver.Firefox(options=options) for x in range(0, max_threads)] # create max_threads num of drivers
     print(f"{len(driver_list)} drivers successfully created")
