@@ -13,8 +13,8 @@ import os
 # from tenacity import retry, stop_after_attempt, wait_random_exponential
 
 
-from globals import k
-
+# from globals import k
+k = {"job_id_list":[], "job_data":{}}
 
 def get_url(query:str, location:str, offset=0, days_ago=1):
     params = {"q":query, "l":location, "filter":0, "start":offset, "fromage":days_ago}
@@ -29,22 +29,28 @@ def get_job_ids(driver, keyword, location, offset, days_ago):
     job_id_list=k['job_id_list']
     
     indeed_jobs_url = get_url(keyword, location, offset, days_ago)
-    print(f"Opening {indeed_jobs_url}")
+    print(f"Opening: {indeed_jobs_url}")
     try:
         driver.get(indeed_jobs_url)
         # time.sleep(np.random.uniform(1, 2))
         response = driver.page_source  # get the html of the page
+        print(f"Response was found")
+        print(response)
         script_tag = re.findall(r'window.mosaic.providerData\["mosaic-provider-jobcards"\]=(\{.+?\});', response)
+        # print(script_tag)
         if script_tag is not None:
+            print("script tag isn't none")
+            print(script_tag)
             json_blob = json.loads(script_tag[0])
+            # print(f"json_blob: {json_blob}")
             jobs_list = json_blob['metaData']['mosaicProviderJobCardsModel']['results']
-            new_jobs_list = [] #Store the new jobs for this run alone, used to find when pages are repeating
+            # print(f"jobs_list: {jobs_list}")
+            print(f"len jobs_list: {len(jobs_list)}")
             for i, job in enumerate(jobs_list):
-                new_jobs_list.append(job)
                 if (job.get('jobkey') is not None) & (job.get('jobkey') not in job_id_list):
                     job_id_list.append((job.get('jobkey'), keyword))
-        
-        return new_jobs_list
+            # if len(jobs_list) < 10:
+            #     break
     except Exception as e:
         print("Error", e)
         

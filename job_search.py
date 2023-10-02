@@ -10,8 +10,9 @@ import datetime
 import os
 import boto3 # Add for AWS upload
 
-from utils import get_url, get_job_ids, get_job_data
-from globals import k
+# from package.python.globals import k
+from utils import get_url, get_job_ids, get_job_data, k
+
              
 # To be used with a cloudwatch scheduler.  
 # Called lambda_function.py in AWS
@@ -30,6 +31,9 @@ def lambda_handler(event, context):
     
     job_data =k["job_data"]
     job_id_list=k['job_id_list']
+    print(f"This is job_data: {job_data}")
+    print(f"This is job_id_list: {job_id_list}")
+
     
     start = time.time() # for timing
     print(f"Running Indeed Job Search")
@@ -39,6 +43,7 @@ def lambda_handler(event, context):
     print(f"Locations: {location_list}")
     
     threads = []
+    
     options = Options()
     options.binary_location = '/opt/headless-chromium'
     options.add_argument('--headless')
@@ -56,8 +61,6 @@ def lambda_handler(event, context):
     except Exception as e:
         print(f"Error creating drivers: {e}")
     end_create_drivers = time.time()
-    # job_id_list = init.job_id_list
-    # job_data = init.job_data
 
     for keyword in keyword_list:
         for location in location_list:
@@ -148,3 +151,4 @@ def lambda_handler(event, context):
         f"Getting the job descriptions took {round((end_get_descs - end_find_jobs)/60,2)}m, "
         f"So in total this took {round((end_get_descs - start)/60,2)}m if we don't have to shut down the drivers.\n")
     #   f"If we do have to shut down the drivers, it adds on another {round(end_shutdown_driver - start_shutdown_driver,2)}s")
+    
