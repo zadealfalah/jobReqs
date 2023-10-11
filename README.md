@@ -4,7 +4,6 @@
 * [General Info](#general-info)
 * [Main](#Main)
 * [AWS](#AWS)
-* [Roadmap](#Roadmap)
 * [To Do](#to-do)
 
 ## General Info
