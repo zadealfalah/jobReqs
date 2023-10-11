@@ -2,13 +2,30 @@
 
 ## Table of Contents
 * [General Info](#general-info)
+* [Main](#Main)
+* [AWS](#AWS)
+* [Roadmap](#Roadmap)
 * [To Do](#to-do)
 
 ## General Info
-This project utilizes Selenium to pull daily job data from Indeed.  The data is stored in Amazon S3 buckets as .json files and the job descriptions are analyzed with the openAI API to find skills and technologies that are sought after.  
-Currently searching for remote jobs with the following keywords: "data science", "data analyst", "data engineer", "machine learning engineer", "mlops"
+This project utilizes Selenium to pull daily job data from Indeed to find the most sought after technologies for various roles, as well as the trends in job postings for each role.  The technologies are discovered through the use of the OpenAI API and spaCy.
+There are two branches: a locally hosted 'main', and a version for AWS hosting 'aws_automation'.
+
+## Main
+The data is stored locally as .json files and the job descriptions are analyzed with the OpenAI API to find skills and technolgoies which are sought after in the following search terms: ["data science", "data analyst", "data engineer", "machine learning engineer", "mlops"].  To be run nightly, searching for remote jobs posted in the last 24 hours.
+
+Job descriptions from Indeed are shortened via a binary classifier trained with spaCy.  The data used to train the model were job descriptions which were pulled, split by newlines, and labeled by hand as to if they contained technologies or not.  The binary classifier is then used on the same splits on new job descriptions to remove any portions which do not contain technologies.
+
+Shortened job descriptions are sent into the OpenAI API using the gpt-3.5-turbo engine.  The prompt is set and given examples to allow GPT To pull lists of technologies.  
+
+The end goal is to have this run daily, slowly building up our results.  The OpenAI API will be used to discover new technologies periodically and their results will be used to (re)train spaCy models that will be used in place of the API for the NER task of discovering technologies in the job descriptions to save on costs.  By combining these two discovery approaches, we will be able to adapt to new technologies being launched / coming in to favor, while still keeping costs low.
+
+## AWS
+Similar to main, except that the data are stored in Amazon S3 buckets as .json files.  Code slightly adapted to use AWS Lambda.
+Currently non-operational due to cloudfare updates (as of 10/09/2023).
 
 ## To Do
-- Create MWAA workflow on AWS
-- Train spaCy model with openAI results
+- Train spaCy model with OpenAI API results
 - Create visualizations of results
+- Continue prompt engineering to lower API costs
+- Write DAG to alternate API vs. spaCy discovery
