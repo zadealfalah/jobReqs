@@ -28,3 +28,4 @@ Currently non-operational due to cloudfare updates (as of 10/09/2023).
 - Create visualizations of results
 - Continue prompt engineering to lower API costs
 - Write DAG to alternate API vs. spaCy discovery
+- Tidy up, remove extra testing notebooks
