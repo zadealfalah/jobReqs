@@ -154,3 +154,5 @@ cython_debug/
 
 #terraform vars (added 08/28/23)
 *.tfvars
+chromedriver
+headless-chromium
