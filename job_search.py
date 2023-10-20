@@ -16,6 +16,8 @@ from globals import k
 
 load_dotenv()        
 
+### add check to see if file already exists for that day.
+
 # def max # threads - remember each needs a driver
 max_threads = int(os.getenv("max_threads"))
 num_pages = int(os.getenv("num_pages"))
