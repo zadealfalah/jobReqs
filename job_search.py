@@ -37,21 +37,23 @@ print(f"Looking at posts in the last {days_ago} days.")
 print(f"Keywords: {keyword_list}")
 print(f"Locations: {location_list}")
 
-threads = []
-options = Options()
-options.add_argument('--headless')
-options.add_argument('--no-sandbox')
-options.add_argument('--single-process')
-options.add_argument('--disable-dev-shm-usage')
 
-try:
-    driver_list = [webdriver.Firefox(options=options) for x in range(0, max_threads)] # create max_threads num of drivers
-    print(f"{len(driver_list)} drivers successfully created")
-except:
-    print(f"Error creating drivers")
+def create_threaded_drivers(num_drivers=max_threads):
+    threads = []
+    options = Options()
+    options.add_argument('--headless')
+    options.add_argument('--no-sandbox')
+    options.add_argument('--single-process')
+    options.add_argument('--disable-dev-shm-usage')
+    try:
+        driver_list = [webdriver.Firefox(options=options) for x in range(0, num_drivers)] # create max_threads num of drivers
+        print(f"{len(driver_list)} drivers successfully created")
+    except:
+        print(f"Error creating drivers")
+    return threads, driver_list
+
+threads, driver_list = create_threaded_drivers()
 end_create_drivers = time.time()
-# job_id_list = init.job_id_list
-# job_data = init.job_data
 
 for keyword in keyword_list:
     for location in location_list:
