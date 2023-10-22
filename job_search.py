@@ -9,6 +9,7 @@ import threading
 import datetime
 import os
 from dotenv import load_dotenv
+import sys
 
 from utils import get_url, dict_to_json, get_job_ids, get_job_data
 from globals import k
@@ -17,6 +18,15 @@ from globals import k
 load_dotenv()        
 
 ### add check to see if file already exists for that day.
+date_info = datetime.datetime.now()
+date_str = date_info.strftime('%d-%m-%y')
+full_time_str = date_info.strftime('%H:%M:%S-%d-%m-%y')
+json_file_name = fr"data/raw_data-{date_str}.json"
+if os.path.isfile(json_file_name):
+    print(f"{json_file_name} already exists!")
+    print(f"Exiting job_search.py")
+    sys.exit()
+
 
 # def max # threads - remember each needs a driver
 max_threads = int(os.getenv("max_threads"))
@@ -32,6 +42,7 @@ job_id_list=k['job_id_list']
 
 start = time.time() # for timing
 print(f"Running Indeed Job Search")
+print(f"Job data will be saved to {json_file_name}")
 print(f"Using {max_threads} drivers and searching {num_pages} pages per keyword/location")
 print(f"Looking at posts in the last {days_ago} days.")
 print(f"Keywords: {keyword_list}")
@@ -55,15 +66,44 @@ def create_threaded_drivers(num_drivers=max_threads):
 threads, driver_list = create_threaded_drivers()
 end_create_drivers = time.time()
 
+
+def get_job_ids(driver, keyword, location, offset, days_ago, last_jobs=[]):
+    job_id_list=k['job_id_list']
+    
+    indeed_jobs_url = get_url(keyword, location, offset, days_ago)
+    try:
+        driver.get(indeed_jobs_url)
+        # time.sleep(np.random.uniform(1, 2))
+        response = driver.page_source  # get the html of the page
+        script_tag = re.findall(r'window.mosaic.providerData\["mosaic-provider-jobcards"\]=(\{.+?\});', response)
+        if script_tag is not None:
+            json_blob = json.loads(script_tag[0])
+            jobs_list = json_blob['metaData']['mosaicProviderJobCardsModel']['results']
+            new_jobs_list = [] #Store the new jobs for this run alone, used to find when pages are repeating
+            for i, job in enumerate(jobs_list):
+                new_jobs_list.append(job)
+                if (job.get('jobkey') is not None) & (job.get('jobkey') not in job_id_list):
+                    job_id_list.append((job.get('jobkey'), keyword))
+        
+        
+        ## idk how to do this with threading
+        ## Want to see if the last_jobs - which come from the last 10 job IDs - are identical to new_jobs_list.
+        ## If that is the case, then the 10 jobs on the page are repeating indicating there are no new jobs, and we should stop the loop.
+        return new_jobs_list
+    except Exception as e:
+        print("Error", e)
+        
+        
+        
+
+        
 for keyword in keyword_list:
     for location in location_list:
         # print(f"Searching for {keyword} in {location}")
         for i in range(0, num_iters):
             for j in range(0, max_threads):
-                old_jobs_flag = False  # flag to break multiple loops if jobs repeat
                 offset = i*10*max_threads + j*10
                 print(f"Searching for {keyword} in {location} on page {int((offset/10)+1)}")
-                # print(offset)
                 t = threading.Thread(args=(driver_list[j], keyword, location, offset, days_ago), target=get_job_ids) 
                 t.start()
                 threads.append(t)
@@ -92,10 +132,6 @@ print(f"Searched for {len(job_data.keys())} job descriptions.")
 end_get_descs = time.time()
 
 
-date_info = datetime.datetime.now()
-date_str = date_info.strftime('%d-%m-%y')
-full_time_str = date_info.strftime('%H:%M:%S-%d-%m-%y')
-
 ### Could add metadata inf on to json before saving it e.g. the time to run each part, time to complete, keywords used, etc.
 ### Would certainly save space in the json file names doing it like that too!
 
@@ -111,7 +147,6 @@ job_data["metadata"]["timings"]["find_job_ids"] = (end_find_jobs - end_create_dr
 job_data["metadata"]["timings"]["get_job_descs"] = (end_get_descs - end_find_jobs)
 
 
-json_file_name = fr"data/raw_data-{date_str}.json"
 
 dict_to_json(job_data, json_file_name)
 print(f"New search saved to: {json_file_name}")
