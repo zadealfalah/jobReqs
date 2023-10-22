@@ -24,7 +24,7 @@ Similar to main, except that the data are stored in Amazon S3 buckets as .json f
 Currently non-operational due to cloudfare updates (as of 10/09/2023).
 
 ## To Do
-- Train spaCy model with OpenAI API results
+- Train spaCy and TensorFlow models with OpenAI API results
 - Create visualizations of results
 - Continue prompt engineering to lower API costs
 - Write DAG to alternate API vs. spaCy discovery
