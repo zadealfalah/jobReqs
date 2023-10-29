@@ -17,6 +17,8 @@ example_text_2 = os.getenv("example_text_2")
 example_response_2 = os.getenv("example_response_2") 
 saved_clf = os.getenv("saved_clf")
 saved_tfidf = os.getenv("saved_tfidf")
+gpt_model = os.getenv("gpt_model")
+gpt_prompt = os.getenv("gpt_prompt")
 
 # To re-use the saved model:
 with open(saved_clf, "rb") as model_file:
@@ -52,8 +54,13 @@ for filename in os.listdir("data"):
         data["metadata"]["models"]["classifier"]["clf"] = saved_clf
         data["metadata"]["models"]["classifier"]["tfidf"] = saved_tfidf
         data["metadata"]["models"]["NER"] = {}
-        data["metadata"]["models"]["NER"] = "gpt-3.5-turbo"  # currently only using gpt
-        # after I train my spacy NER model will be using just that so having it be static now is fine.
+        data["metadata"]["models"]["NER"]["model"] = gpt_model
+        data["metadata"]["models"]["NER"]["prompt"] = gpt_prompt
+        data["metadata"]["models"]["NER"]["examples"] = {}
+        data["metadata"]["models"]["NER"]["examples"]["example_1"] = example_text_1
+        data["metadata"]["models"]["NER"]["examples"]["example_response_1"] = example_response_1
+        data["metadata"]["models"]["NER"]["examples"]["example_2"] = example_text_2
+        data["metadata"]["models"]["NER"]["examples"]["example_response_2"] = example_response_2
         dict_to_json(data, fr"data/{filename}")
         print(f"Shortened {filename}")
     else:

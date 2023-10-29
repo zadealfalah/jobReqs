@@ -120,16 +120,16 @@ def check_for_techs(text, vectorizer, clf, nlp, n=5):
 
 
 
-def ask_gpt(text, example_text_1=os.getenv("example_text_1"), example_text_2=os.getenv("example_text_2"), example_response_1=os.getenv("example_response_1"), example_response_2=os.getenv("example_response_2")):
+def ask_gpt(text, gpt_model=os.getenv("gpt_model"), gpt_prompt=os.getenv("gpt_prompt"), example_prompt=os.getenv("example_prompt"), example_text_1=os.getenv("example_text_1"), example_text_2=os.getenv("example_text_2"), example_response_1=os.getenv("example_response_1"), example_response_2=os.getenv("example_response_2")):
     response = openai.ChatCompletion.create(
-        model="gpt-3.5-turbo",
+        model=f"{gpt_model}",
         messages=[
-            {"role":"system", "content":"You list specific technologies from texts separated by commas."},
-            {"role":"user", "content":f"Report ONLY specific tools and technologies from the following text as a comma separated list.  Do not return generics like 'data processing': {example_text_1}"},
+            {"role":"system", "content":f"{gpt_prompt}"},
+            {"role":"user", "content":f"{example_text_1}"},
             {"role":"assistant", "content":f"{example_response_1}"},
-            {"role":"user", "content":f"Report ONLY specific tools and technologies from the following text as a comma separated list.  Do not return generics like 'data processing': {example_text_2}"},
+            {"role":"user", "content":f"{example_text_2}"},
             {"role":"assistant", "content":f"{example_response_2}"},
-            {"role":"user", "content":f"Report ONLY specific tools and technologies from the following text as a comma separated list.  Do not return generics like 'data processing': {text}"}
+            {"role":"user", "content":f"{example_prompt} {text}"}
         ]
     )
     return response
@@ -221,3 +221,35 @@ def remove_processing(filepath, delete_processed = True):
         print(f"File {filepath} has been removed, and file {unprocessed_str} has been recreated.")
     else:
         print(f"File {unprocessed_str} has been recreated.  The original file {filepath} was not deleted.")
+        
+        
+        
+def get_filelist(start_date, end_date, folder_path='data', start_str='p-raw'):
+    """Get the json files which start with {start_str} in the {folder_path} within the date range (inclusive).
+
+    Args:
+        start_date (str): String start date in dd-mm-yy format - e.g. 11-09-23
+        end_date (str): String end date in dd-mm-yy format - e.g. 17-10-23
+        folder_path (str, optional): Folder path to search within. Defaults to 'data'.
+        start_str (Str, optional): Starting string for files to pull. Defaults to 'p-raw'
+    Returns:
+        files_between_dates (list): List of strings, where each string is a filename from {folder_path} beginning with {start_str}
+        and within [{start_date}, {end_date}]
+    """
+    start_date = datetime.datetime.strptime(start_date, "%d-%m-%y")
+    end_date = datetime.datetime.strptime(end_date, "%d-%m-%y")
+    
+    files_between_dates = []
+    
+    for filename in os.listdir(folder_path):
+        if filename.startswith(start_str):
+            try:
+                # Extract the date from the file name
+                file_date = datetime.datetime.strptime(filename[11:19], "%d-%m-%y")
+                if start_date <= file_date <= end_date:
+                    files_between_dates.append(filename)
+            except ValueError:
+                # In case the date in the file name is not in the expected format
+                pass
+    
+    return files_between_dates
