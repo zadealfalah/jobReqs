@@ -10,8 +10,9 @@ import datetime
 import os
 from dotenv import load_dotenv
 import sys
+import numpy as np
 
-from utils import get_url, dict_to_json, get_job_ids, get_job_data
+from utils import get_url, dict_to_json, get_job_data
 from globals import k
         
 
@@ -67,9 +68,8 @@ threads, driver_list = create_threaded_drivers()
 end_create_drivers = time.time()
 
 
-def get_job_ids(driver, keyword, location, offset, days_ago, last_jobs=[]):
+def get_job_ids(driver, keyword, location, offset, days_ago, current_iter_job_ids):
     job_id_list=k['job_id_list']
-    
     indeed_jobs_url = get_url(keyword, location, offset, days_ago)
     try:
         driver.get(indeed_jobs_url)
@@ -79,37 +79,56 @@ def get_job_ids(driver, keyword, location, offset, days_ago, last_jobs=[]):
         if script_tag is not None:
             json_blob = json.loads(script_tag[0])
             jobs_list = json_blob['metaData']['mosaicProviderJobCardsModel']['results']
-            new_jobs_list = [] #Store the new jobs for this run alone, used to find when pages are repeating
             for i, job in enumerate(jobs_list):
-                new_jobs_list.append(job)
                 if (job.get('jobkey') is not None) & (job.get('jobkey') not in job_id_list):
                     job_id_list.append((job.get('jobkey'), keyword))
-        
-        
-        ## idk how to do this with threading
-        ## Want to see if the last_jobs - which come from the last 10 job IDs - are identical to new_jobs_list.
-        ## If that is the case, then the 10 jobs on the page are repeating indicating there are no new jobs, and we should stop the loop.
-        return new_jobs_list
+                    current_iter_job_ids.append(job.get('jobkey'))
     except Exception as e:
         print("Error", e)
-        
         
         
 
         
 for keyword in keyword_list:
     for location in location_list:
+        stops = False
         # print(f"Searching for {keyword} in {location}")
         for i in range(0, num_iters):
-            for j in range(0, max_threads):
-                offset = i*10*max_threads + j*10
-                print(f"Searching for {keyword} in {location} on page {int((offset/10)+1)}")
-                t = threading.Thread(args=(driver_list[j], keyword, location, offset, days_ago), target=get_job_ids) 
-                t.start()
-                threads.append(t)
-                
+            if stops == True:
+                break
+            else:
+                prev_iter_job_ids = []
+                for j in range(0, max_threads):
+                    current_iter_job_ids = []
+                    offset = i*10*max_threads + j*10
+                    print(f"Searching for {keyword} in {location} on page {int((offset/10)+1)}")
+                    t = threading.Thread(args=(driver_list[j], keyword, location, offset, days_ago, current_iter_job_ids), target=get_job_ids) 
+                    t.start()
+                    threads.append(t)
+
+                    ## If set here both lists are always empty, instantly finishes.
+                    # diffs = np.setdiff1d(current_iter_job_ids, prev_iter_job_ids)
+                    # if len(diffs) == 0:
+                    #     print(current_iter_job_ids, prev_iter_job_ids)
+                    #     print(f"No diff between last and current job IDs on page {int((offset/10)+1)}.")
+                    #     stops = True
+                    #     break 
+                    # else:
+                    #     prev_iter_job_ids = current_iter_job_ids
+                        
                 for t in threads:
                     t.join()
+                ## If set here, will only compare page 10 to 11, 20 to 21, etc.
+                # diffs = np.setdiff1d(current_iter_job_ids, prev_iter_job_ids)
+                # if len(diffs) == 0:
+                #     print(current_iter_job_ids, prev_iter_job_ids)
+                #     print(f"No diff between last and current job IDs on page {int((offset/10)+1)}.")
+                #     stops = True
+                #     break 
+                # else:
+                #     prev_iter_job_ids = current_iter_job_ids
+
+                    
 # print(f"Threads results:")
 # print([thread.result() for thread in threads]) #doesn't work, how to set the old_jobs_flag with a thread??
 end_find_jobs = time.time()
@@ -139,7 +158,7 @@ job_data["metadata"] = {}
 job_data["metadata"]["keywords"] = keyword_list
 job_data["metadata"]["locations"] = location_list
 job_data["metadata"]["time_ran"] = full_time_str
-job_data["metadata"]["num_jobs"] = len(job_data.keys())
+job_data["metadata"]["num_jobs"] = len(job_data.keys() - 1)
 
 job_data["metadata"]["timings"] = {}
 job_data["metadata"]["timings"]["start_drivers"] = (end_create_drivers - start)

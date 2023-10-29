@@ -24,11 +24,14 @@ Once completed, this will be run as 'job_search.py' --> 'add_techs.py' --> 'chec
 
 ## AWS
 Similar to main, except that the data are stored in Amazon S3 buckets as .json files.  Code slightly adapted to use AWS Lambda.
-Currently non-operational due to cloudfare updates (as of 10/09/2023).
+Currently non-operational due to cloudfare updates (as of 10/09/2023).  Cloudfare now detects Selenium as a bot and stops the search.  Can run with old data.
 
 ## To Do
 - Train spaCy and TensorFlow models with OpenAI API results
+- Change Selenium to allow running on AWS again
 - Create visualizations of results
+- Add logging instead of long metadata
 - Continue prompt engineering to lower API costs
-- Write DAG to alternate API vs. spaCy discovery
+- Write DAG to alternate API vs. spaCy/TF discovery
 - Tidy up, remove extra testing notebooks
+
