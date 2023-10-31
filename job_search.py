@@ -35,7 +35,7 @@ max_threads = int(os.getenv("max_threads"))
 num_pages = int(os.getenv("num_pages"))
 num_iters = num_pages // max_threads
 keyword_list = json.loads(os.getenv("keyword_list"))
-# keyword_list = ['mlops'] # for testing
+# keyword_list = ['mle'] # for testing
 location_list = json.loads(os.getenv("location_list"))
 days_ago = os.getenv("days_ago")
 
@@ -70,6 +70,8 @@ threads, driver_list = create_threaded_drivers()
 end_create_drivers = time.time()
 
 
+# print(f"Searching for {keyword} in {location} on page {int((offset/10) + 1)}")
+
 # Create an event object to signal the threads to stop
 stop_event = threading.Event()
 
@@ -96,8 +98,10 @@ def get_job_ids(driver, keyword, location, offset, days_ago):
 
                 if job.get('jobkey') is not None:
                     job_key = job.get('jobkey')
-                    print(job_key)
-                    if job_key in last_10_job_keys:
+                    
+                    job_keys_in_current_iteration = set([job_key] + list(last_10_job_keys))
+                    
+                    if set(last_10_job_keys) == job_keys_in_current_iteration:
                         # Detected repeating job keys in the last 10 jobs, set the stop event
                         stop_event.set()
                         return  # Exit the function
@@ -107,7 +111,11 @@ def get_job_ids(driver, keyword, location, offset, days_ago):
                     job_id_list.append((job_key, keyword))
 
     except Exception as e:
-        print("Error", e)
+        if "list index out of range" in str(e):
+            # Handling the specific exception "list index out of range"
+            print(f"List index out of range - term {keyword} probably not found.")
+            stop_event.set()
+            return  # Exit the function
 
 # Iterate through your loops
 for keyword in keyword_list:
@@ -137,7 +145,7 @@ for keyword in keyword_list:
                 break  # Exit the inner loop
 
         if found_repeating_job_keys:
-            print(f"Found repeating job keys.")
+            print(f"Found repeating job keys, move to next.")
             # Exit the outer loop to move to the next location
             break
 
