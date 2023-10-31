@@ -158,7 +158,7 @@ job_data["metadata"] = {}
 job_data["metadata"]["keywords"] = keyword_list
 job_data["metadata"]["locations"] = location_list
 job_data["metadata"]["time_ran"] = full_time_str
-job_data["metadata"]["num_jobs"] = len(job_data.keys() - 1)
+job_data["metadata"]["num_jobs"] = len(job_data.keys()) - 1
 
 job_data["metadata"]["timings"] = {}
 job_data["metadata"]["timings"]["start_drivers"] = (end_create_drivers - start)
