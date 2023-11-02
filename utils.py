@@ -81,7 +81,6 @@ def get_job_data(driver, job_id):
             
 def check_for_techs(text, vectorizer, clf, nlp, n=5):
     original_text = text
-    
     # Don't use split function as we don't want the output I use to label them manually.
     splits = text.count("\n")//n
     split_text = re.findall("\n".join(["[^\n]+"]*splits), original_text)
@@ -97,9 +96,16 @@ def check_for_techs(text, vectorizer, clf, nlp, n=5):
 
 
 
-def ask_gpt(text, gpt_model=os.getenv("gpt_model"), gpt_prompt=os.getenv("gpt_prompt"), example_prompt=os.getenv("example_prompt"), example_text_1=os.getenv("example_text_1"), example_text_2=os.getenv("example_text_2"), example_response_1=os.getenv("example_response_1"), example_response_2=os.getenv("example_response_2")):
+def ask_gpt(text, gpt_model, gpt_prompt, example_prompt, example_text_1, example_text_2, example_response_1, example_response_2):
+    print(f"gpt_model: {gpt_model}")
+    print(f"gpt_prompt: {gpt_prompt}")
+    print(f"example text 1: {example_text_1}")
+    print(f"example response 1: {example_response_1}")
+    print(f"example text 2: {example_text_2}")
+    print(f"example response 2: {example_response_2}")
+    print(f"text: {text}")
     response = openai.ChatCompletion.create(
-        model=f"{gpt_model}",
+        model=gpt_model,
         messages=[
             {"role":"system", "content":f"{gpt_prompt}"},
             {"role":"user", "content":f"{example_text_1}"},
@@ -121,25 +127,30 @@ def get_job_techs(data, key, keylist, roughly_split):
     if key in roughly_split:
         print(f"~{(roughly_split.index(key)+1)*10}% done")
     if "cleaned_desc" not in data[key]: #no cleaned desc as loading in desc failed
+        print(f"No Cleaned Desc, Deleting Job ID {key}")
         del data[key]
+        
     if len(data[key]["cleaned_desc"]) > 1: #there are jds that seemed to contain no techs after classifier, ignore those
+        print(f"To ask_gpt: {key}")
         data[key]["techs"] = [x.lower() for x in ask_gpt(data[key]["cleaned_desc"])["choices"][0]["message"]["content"].split(", ")]
-        # print(data[key]["techs"])
+        print(f"techs: {data[key]['techs']}")
     else:
         data[key]["techs"] = ""
-        
+        print(f"no techs for {key}")
+
         
 def update_tech_json(datapath="data", prefix='p-', startstr="raw_data"):
     for filename in os.listdir(datapath):
         if filename.startswith(startstr): # just with one file at first
             print(f"Processing {filename}")
-            filepath = fr"data/{filename}"
+            filepath = fr"{datapath}/{filename}"
             with open(filepath) as f:
                 data = json.load(f)
             keylist = list(data.keys())
             print(f"There are {len(keylist)-1} jobs in {filename}")
             roughly_split = [x[-1] for x in np.array_split(np.array(keylist[:-1]), 10)]
             for key in keylist:
+                print(key)
                 # print(f"Before: {key}, \n {data[key]['techs']}")
                 #Formatted like this so that the retrys are by-key rather than by-file
                 try:

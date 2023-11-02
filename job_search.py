@@ -1,5 +1,8 @@
 from selenium import webdriver
-from selenium.webdriver.firefox.options import Options
+# from selenium.webdriver.firefox.options import Options 
+# Switch to chromedriver for AWS
+from selenium.webdriver.chrome.options import Options
+from selenium_stealth import stealth
 import time
 import json
 import re
@@ -56,14 +59,27 @@ def create_threaded_drivers(num_drivers=max_threads):
     threads = []
     options = Options()
     options.add_argument('--headless')
-    options.add_argument('--no-sandbox')
-    options.add_argument('--single-process')
-    options.add_argument('--disable-dev-shm-usage')
+    options.add_experimental_option("excludeSwitches", ["enable-automation"])
+    options.add_experimental_option('useAutomationExtension', False)
     try:
-        driver_list = [webdriver.Firefox(options=options) for x in range(0, num_drivers)] # create max_threads num of drivers
-        print(f"{len(driver_list)} drivers successfully created")
+        drivers = [webdriver.Chrome(options=options) for x in range(0, num_drivers)] # create max_threads num of drivers
+        print(f"{len(drivers)} drivers successfully created")
+        driver_list = [stealth(x,
+                            languages=["en-US", "en"],
+                            vendor="Google Inc.",
+                            platform="Win32",
+                            webgl_vendor="Intel Inc.",
+                            renderer="Intel Iris OpenGL Engine",
+                            fix_hairline=True,) for x in drivers]
+        # print(f"{len(driver_list)} drivers stealthed sucessfully")
+        
+        # Below for testing stealth, comment out when not testing
+        for i, driver in enumerate(driver_list):
+            driver.get("https://bot.sannysoft.com/")
+            driver.save_screenshot(f"test_stealth_d{i}.png")
     except:
         print(f"Error creating drivers")
+    
     return threads, driver_list
 
 threads, driver_list = create_threaded_drivers()
