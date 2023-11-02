@@ -10,7 +10,6 @@ import os
 from dotenv import load_dotenv
 import openai
 import numpy as np
-from tenacity import retry, stop_after_attempt, wait_random_exponential
 
 
 from globals import k
@@ -79,104 +78,9 @@ def get_job_data(driver, job_id):
             print("Error", e)
             
             
-def check_for_techs(text, vectorizer, clf, nlp, n=5):
-    original_text = text
-    # Don't use split function as we don't want the output I use to label them manually.
-    splits = text.count("\n")//n
-    split_text = re.findall("\n".join(["[^\n]+"]*splits), original_text)
-    processed = [" ".join([token.lemma_ for token in nlp(para)]) for para in split_text]
-    
-    transformed = vectorizer.transform(processed)
-    pred_vals = clf.predict(transformed)
-    
-    zipped_paras = list(zip(split_text, pred_vals))
-    # return(zipped_paras)
-    cleaned = " ".join([text for (text, label) in zipped_paras if label == 1])
-    return cleaned.strip("\n")  # add on stripping the newlines from the cleaned descs to lower # tokens
 
-
-
-def ask_gpt(text, gpt_model, gpt_prompt, example_prompt, example_text_1, example_text_2, example_response_1, example_response_2):
-    print(f"gpt_model: {gpt_model}")
-    print(f"gpt_prompt: {gpt_prompt}")
-    print(f"example text 1: {example_text_1}")
-    print(f"example response 1: {example_response_1}")
-    print(f"example text 2: {example_text_2}")
-    print(f"example response 2: {example_response_2}")
-    print(f"text: {text}")
-    response = openai.ChatCompletion.create(
-        model=gpt_model,
-        messages=[
-            {"role":"system", "content":f"{gpt_prompt}"},
-            {"role":"user", "content":f"{example_text_1}"},
-            {"role":"assistant", "content":f"{example_response_1}"},
-            {"role":"user", "content":f"{example_text_2}"},
-            {"role":"assistant", "content":f"{example_response_2}"},
-            {"role":"user", "content":f"{example_prompt} {text}"}
-        ]
-    )
-    return response
-
-
-def print_attempt_number(retry_state):
-    print(f"Retrying: {retry_state.attempt_number}...")
-@retry(wait=wait_random_exponential(min=1, max=60), stop=stop_after_attempt(6), after=print_attempt_number)
-def get_job_techs(data, key, keylist, roughly_split):
-    if key.startswith("metadata"):
-        return #metadata key, ignore it
-    if key in roughly_split:
-        print(f"~{(roughly_split.index(key)+1)*10}% done")
-    if "cleaned_desc" not in data[key]: #no cleaned desc as loading in desc failed
-        print(f"No Cleaned Desc, Deleting Job ID {key}")
-        del data[key]
-        
-    if len(data[key]["cleaned_desc"]) > 1: #there are jds that seemed to contain no techs after classifier, ignore those
-        print(f"To ask_gpt: {key}")
-        data[key]["techs"] = [x.lower() for x in ask_gpt(data[key]["cleaned_desc"])["choices"][0]["message"]["content"].split(", ")]
-        print(f"techs: {data[key]['techs']}")
-    else:
-        data[key]["techs"] = ""
-        print(f"no techs for {key}")
-
-        
-def update_tech_json(datapath="data", prefix='p-', startstr="raw_data"):
-    for filename in os.listdir(datapath):
-        if filename.startswith(startstr): # just with one file at first
-            print(f"Processing {filename}")
-            filepath = fr"{datapath}/{filename}"
-            with open(filepath) as f:
-                data = json.load(f)
-            keylist = list(data.keys())
-            print(f"There are {len(keylist)-1} jobs in {filename}")
-            roughly_split = [x[-1] for x in np.array_split(np.array(keylist[:-1]), 10)]
-            for key in keylist:
-                print(key)
-                # print(f"Before: {key}, \n {data[key]['techs']}")
-                #Formatted like this so that the retrys are by-key rather than by-file
-                try:
-                    get_job_techs(data, key, keylist, roughly_split)
-                except Exception as e:
-                    print(f"Error getting tech list: {e}")
-                    prefix = 'np-' # change prefix to show this file had at least one error occur
-                time.sleep(2) # add sleep see if it fixes the timeouts.
-                # print(f"After: {data[key]['techs']}")
-                
-            # data['metadata']['gpt'] = {}   #should add the gpt metadata to this after making it all into env vars for ask_gpt()
-            # data['metadata']['gpt']['prompt']
-            
-            dict_to_json(data, fr"{datapath}/{filename}") #after going through all keys, update the json file
-            
-            try:
-                os.rename(fr"{datapath}/{filename}", fr"{datapath}/{prefix}{filename}") #update the filename with p- to show it's been processed
-                print(f"{filepath} renamed to {datapath}/{prefix}{filename}")
-            except FileExistsError as e:
-                print(f"File {datapath}/{prefix}{filename} already exists")
-                print(f"Saving as {datapath}/{prefix}{filename}-1")
-                os.rename(fr"{datapath}/{filename}", fr"{datapath}/{prefix}{filename}-1")
-                print(f"{filepath} renamed to {datapath}/{prefix}{filename}-1")
                 
                 
-
 def remove_processing(filepath, delete_processed = True):
     """Used to remove processing leaving only the raw data for reuse.
 
