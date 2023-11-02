@@ -62,23 +62,28 @@ def create_threaded_drivers(num_drivers=max_threads):
     options.add_experimental_option("excludeSwitches", ["enable-automation"])
     options.add_experimental_option('useAutomationExtension', False)
     try:
-        drivers = [webdriver.Chrome(options=options) for x in range(0, num_drivers)] # create max_threads num of drivers
-        print(f"{len(drivers)} drivers successfully created")
-        driver_list = [stealth(x,
-                            languages=["en-US", "en"],
-                            vendor="Google Inc.",
-                            platform="Win32",
-                            webgl_vendor="Intel Inc.",
-                            renderer="Intel Iris OpenGL Engine",
-                            fix_hairline=True,) for x in drivers]
-        # print(f"{len(driver_list)} drivers stealthed sucessfully")
-        
-        # Below for testing stealth, comment out when not testing
-        for i, driver in enumerate(driver_list):
-            driver.get("https://bot.sannysoft.com/")
-            driver.save_screenshot(f"test_stealth_d{i}.png")
-    except:
-        print(f"Error creating drivers")
+        driver_list = [webdriver.Chrome(options=options) for x in range(0, num_drivers)] # create max_threads num of drivers
+        print(f"{len(driver_list)} drivers successfully created")
+        try:
+            for x in driver_list:
+                stealth(x,
+                        languages=["en-US", "en"],
+                        vendor="Google Inc.",
+                        platform="Win32",
+                        webgl_vendor="Intel Inc.",
+                        renderer="Intel Iris OpenGL Engine",
+                        fix_hairline=True,)
+            print(f"{len(driver_list)} drivers stealthed sucessfully")
+        except Exception as e:
+            print(f"Error stealthing drivers: {e}")
+            
+        # # Below for testing stealth, comment out when not testing
+        # for i, driver in enumerate(driver_list):
+        #     driver.get("https://bot.sannysoft.com/")
+        #     driver.save_screenshot(f"test_stealth_d{i}.png")
+            
+    except Exception as e:
+        print(f"Error creating drivers: {e}")
     
     return threads, driver_list
 
