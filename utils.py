@@ -10,7 +10,6 @@ import os
 from dotenv import load_dotenv
 import openai
 import numpy as np
-from tenacity import retry, stop_after_attempt, wait_random_exponential
 
 
 from globals import k
@@ -23,29 +22,6 @@ def get_url(query:str, location:str, offset=0, days_ago=1):
 def dict_to_json(dict, filepath):
     with open(filepath, "w") as out:
         json.dump(dict, out)
-
-
-def get_job_ids(driver, keyword, location, offset, days_ago):
-    job_id_list=k['job_id_list']
-    
-    indeed_jobs_url = get_url(keyword, location, offset, days_ago)
-    try:
-        driver.get(indeed_jobs_url)
-        # time.sleep(np.random.uniform(1, 2))
-        response = driver.page_source  # get the html of the page
-        script_tag = re.findall(r'window.mosaic.providerData\["mosaic-provider-jobcards"\]=(\{.+?\});', response)
-        if script_tag is not None:
-            json_blob = json.loads(script_tag[0])
-            jobs_list = json_blob['metaData']['mosaicProviderJobCardsModel']['results']
-            new_jobs_list = [] #Store the new jobs for this run alone, used to find when pages are repeating
-            for i, job in enumerate(jobs_list):
-                new_jobs_list.append(job)
-                if (job.get('jobkey') is not None) & (job.get('jobkey') not in job_id_list):
-                    job_id_list.append((job.get('jobkey'), keyword))
-        
-        return new_jobs_list
-    except Exception as e:
-        print("Error", e)
         
         
 def get_job_data(driver, job_id):
@@ -102,93 +78,9 @@ def get_job_data(driver, job_id):
             print("Error", e)
             
             
-def check_for_techs(text, vectorizer, clf, nlp, n=5):
-    original_text = text
-    
-    # Don't use split function as we don't want the output I use to label them manually.
-    splits = text.count("\n")//n
-    split_text = re.findall("\n".join(["[^\n]+"]*splits), original_text)
-    processed = [" ".join([token.lemma_ for token in nlp(para)]) for para in split_text]
-    
-    transformed = vectorizer.transform(processed)
-    pred_vals = clf.predict(transformed)
-    
-    zipped_paras = list(zip(split_text, pred_vals))
-    # return(zipped_paras)
-    cleaned = " ".join([text for (text, label) in zipped_paras if label == 1])
-    return cleaned.strip("\n")  # add on stripping the newlines from the cleaned descs to lower # tokens
 
-
-
-def ask_gpt(text, example_text_1=os.getenv("example_text_1"), example_text_2=os.getenv("example_text_2"), example_response_1=os.getenv("example_response_1"), example_response_2=os.getenv("example_response_2")):
-    response = openai.ChatCompletion.create(
-        model="gpt-3.5-turbo",
-        messages=[
-            {"role":"system", "content":"You list specific technologies from texts separated by commas."},
-            {"role":"user", "content":f"Report ONLY specific tools and technologies from the following text as a comma separated list.  Do not return generics like 'data processing': {example_text_1}"},
-            {"role":"assistant", "content":f"{example_response_1}"},
-            {"role":"user", "content":f"Report ONLY specific tools and technologies from the following text as a comma separated list.  Do not return generics like 'data processing': {example_text_2}"},
-            {"role":"assistant", "content":f"{example_response_2}"},
-            {"role":"user", "content":f"Report ONLY specific tools and technologies from the following text as a comma separated list.  Do not return generics like 'data processing': {text}"}
-        ]
-    )
-    return response
-
-
-def print_attempt_number(retry_state):
-    print(f"Retrying: {retry_state.attempt_number}...")
-@retry(wait=wait_random_exponential(min=1, max=60), stop=stop_after_attempt(6), after=print_attempt_number)
-def get_job_techs(data, key, keylist, roughly_split):
-    if key.startswith("metadata"):
-        return #metadata key, ignore it
-    if key in roughly_split:
-        print(f"~{(roughly_split.index(key)+1)*10}% done")
-    if "cleaned_desc" not in data[key]: #no cleaned desc as loading in desc failed
-        del data[key]
-    if len(data[key]["cleaned_desc"]) > 1: #there are jds that seemed to contain no techs after classifier, ignore those
-        data[key]["techs"] = [x.lower() for x in ask_gpt(data[key]["cleaned_desc"])["choices"][0]["message"]["content"].split(", ")]
-        # print(data[key]["techs"])
-    else:
-        data[key]["techs"] = ""
-        
-        
-def update_tech_json(datapath="data", prefix='p-', startstr="raw_data"):
-    for filename in os.listdir(datapath):
-        if filename.startswith(startstr): # just with one file at first
-            print(f"Processing {filename}")
-            filepath = fr"data/{filename}"
-            with open(filepath) as f:
-                data = json.load(f)
-            keylist = list(data.keys())
-            print(f"There are {len(keylist)-1} jobs in {filename}")
-            roughly_split = [x[-1] for x in np.array_split(np.array(keylist[:-1]), 10)]
-            for key in keylist:
-                # print(f"Before: {key}, \n {data[key]['techs']}")
-                #Formatted like this so that the retrys are by-key rather than by-file
-                try:
-                    get_job_techs(data, key, keylist, roughly_split)
-                except Exception as e:
-                    print(f"Error getting tech list: {e}")
-                    prefix = 'np-' # change prefix to show this file had at least one error occur
-                time.sleep(2) # add sleep see if it fixes the timeouts.
-                # print(f"After: {data[key]['techs']}")
-                
-            # data['metadata']['gpt'] = {}   #should add the gpt metadata to this after making it all into env vars for ask_gpt()
-            # data['metadata']['gpt']['prompt']
-            
-            dict_to_json(data, fr"{datapath}/{filename}") #after going through all keys, update the json file
-            
-            try:
-                os.rename(fr"{datapath}/{filename}", fr"{datapath}/{prefix}{filename}") #update the filename with p- to show it's been processed
-                print(f"{filepath} renamed to {datapath}/{prefix}{filename}")
-            except FileExistsError as e:
-                print(f"File {datapath}/{prefix}{filename} already exists")
-                print(f"Saving as {datapath}/{prefix}{filename}-1")
-                os.rename(fr"{datapath}/{filename}", fr"{datapath}/{prefix}{filename}-1")
-                print(f"{filepath} renamed to {datapath}/{prefix}{filename}-1")
                 
                 
-
 def remove_processing(filepath, delete_processed = True):
     """Used to remove processing leaving only the raw data for reuse.
 
@@ -221,3 +113,35 @@ def remove_processing(filepath, delete_processed = True):
         print(f"File {filepath} has been removed, and file {unprocessed_str} has been recreated.")
     else:
         print(f"File {unprocessed_str} has been recreated.  The original file {filepath} was not deleted.")
+        
+        
+        
+def get_filelist(start_date, end_date, folder_path='data', start_str='p-raw'):
+    """Get the json files which start with {start_str} in the {folder_path} within the date range (inclusive).
+
+    Args:
+        start_date (str): String start date in dd-mm-yy format - e.g. 11-09-23
+        end_date (str): String end date in dd-mm-yy format - e.g. 17-10-23
+        folder_path (str, optional): Folder path to search within. Defaults to 'data'.
+        start_str (Str, optional): Starting string for files to pull. Defaults to 'p-raw'
+    Returns:
+        files_between_dates (list): List of strings, where each string is a filename from {folder_path} beginning with {start_str}
+        and within [{start_date}, {end_date}]
+    """
+    start_date = datetime.datetime.strptime(start_date, "%d-%m-%y")
+    end_date = datetime.datetime.strptime(end_date, "%d-%m-%y")
+    
+    files_between_dates = []
+    
+    for filename in os.listdir(folder_path):
+        if filename.startswith(start_str):
+            try:
+                # Extract the date from the file name
+                file_date = datetime.datetime.strptime(filename[11:19], "%d-%m-%y")
+                if start_date <= file_date <= end_date:
+                    files_between_dates.append(filename)
+            except ValueError:
+                # In case the date in the file name is not in the expected format
+                pass
+    
+    return files_between_dates

@@ -19,13 +19,19 @@ Shortened job descriptions are sent into the OpenAI API using the gpt-3.5-turbo 
 
 The end goal is to have this run daily, slowly building up our results.  The OpenAI API will be used to discover new technologies periodically and their results will be used to (re)train spaCy models that will be used in place of the API for the NER task of discovering technologies in the job descriptions to save on costs.  By combining these two discovery approaches, we will be able to adapt to new technologies being launched / coming in to favor, while still keeping costs low.
 
+Once completed, this will be run as 'job_search.py' --> 'add_techs.py' --> 'check_results.py' --> 'create_hf_data.py'* --> 'hf_zero_shot.py'
+*'create_hf_data.py' will be used whenever we need to refresh our model with new training data.  Will be done periodically to make sure that new techs aren't lost.
+
 ## AWS
 Similar to main, except that the data are stored in Amazon S3 buckets as .json files.  Code slightly adapted to use AWS Lambda.
-Currently non-operational due to cloudfare updates (as of 10/09/2023).
+Currently non-operational due to cloudfare updates (as of 10/09/2023).  Cloudfare now detects Selenium as a bot and stops the search.  Can run with old data.
 
 ## To Do
 - Train spaCy and TensorFlow models with OpenAI API results
+- Change Selenium to allow running on AWS again
 - Create visualizations of results
+- Add logging instead of long metadata
 - Continue prompt engineering to lower API costs
-- Write DAG to alternate API vs. spaCy discovery
+- Write DAG to alternate API vs. spaCy/TF discovery
 - Tidy up, remove extra testing notebooks
+
