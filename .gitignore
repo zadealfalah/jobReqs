@@ -156,3 +156,10 @@ cython_debug/
 *.tfvars
 chromedriver
 headless-chromium
+init_templates/base.html
+init_templates/index.html
+init_templates/login.html
+init_templates/user.html
+init_templates/view.html
+init_flask_app.py
+app.py

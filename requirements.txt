@@ -1,0 +1,8 @@
+selenium
+beautifulsoup
+python-dotenv
+numpy
+pickle
+spacy
+openai
+tenacity
