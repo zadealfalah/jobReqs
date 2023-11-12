@@ -1,8 +1,8 @@
 from selenium import webdriver
-# from selenium.webdriver.firefox.options import Options 
+from selenium.webdriver.firefox.options import Options 
 # Switch to chromedriver for AWS
-from selenium.webdriver.chrome.options import Options
-from selenium_stealth import stealth
+# from selenium.webdriver.chrome.options import Options
+# from selenium_stealth import stealth
 import time
 import json
 import re
@@ -59,33 +59,16 @@ def create_threaded_drivers(num_drivers=max_threads):
     threads = []
     options = Options()
     options.add_argument('--headless')
-    options.add_experimental_option("excludeSwitches", ["enable-automation"])
-    options.add_experimental_option('useAutomationExtension', False)
+    options.add_argument('--no-sandbox')
+    options.add_argument('--single-process')
+    options.add_argument('--disable-dev-shm-usage')
     try:
-        driver_list = [webdriver.Chrome(options=options) for x in range(0, num_drivers)] # create max_threads num of drivers
+        driver_list = [webdriver.Firefox(options=options) for x in range(0, num_drivers)] # create max_threads num of drivers
         print(f"{len(driver_list)} drivers successfully created")
-        try:
-            for x in driver_list:
-                stealth(x,
-                        languages=["en-US", "en"],
-                        vendor="Google Inc.",
-                        platform="Win32",
-                        webgl_vendor="Intel Inc.",
-                        renderer="Intel Iris OpenGL Engine",
-                        fix_hairline=True,)
-            print(f"{len(driver_list)} drivers stealthed sucessfully")
-        except Exception as e:
-            print(f"Error stealthing drivers: {e}")
-            
-        # # Below for testing stealth, comment out when not testing
-        # for i, driver in enumerate(driver_list):
-        #     driver.get("https://bot.sannysoft.com/")
-        #     driver.save_screenshot(f"test_stealth_d{i}.png")
-            
     except Exception as e:
         print(f"Error creating drivers: {e}")
-    
     return threads, driver_list
+
 
 threads, driver_list = create_threaded_drivers()
 end_create_drivers = time.time()
