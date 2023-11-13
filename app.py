@@ -1,10 +1,11 @@
 
 import os
 import ast
-from dash import Dash, dcc, html, Input, Output
+from dash import Dash, dcc, html, Input, Output, State
 import json
 from datetime import datetime
 from dateutil.relativedelta import relativedelta
+import plotly.graph_objs as go
 
 # Retrieve the keyword list from the environment variable
 keyword_list = ["data science", "data analyst", "data engineer", "machine learning engineer", "mlops"]
@@ -49,7 +50,12 @@ app.layout = html.Div([
         multi=True,  # Allow multiple selections
         value=keyword_list  # Select all terms by default
     ),
-    dcc.Graph(id='line-graph')
+    dcc.Graph(id='line-graph'),
+    html.Button(
+        id='reset-button',
+        n_clicks=0,
+        children='Reset Date Range'
+    )
 ])
 
 # Define callback to update the line graph
@@ -57,14 +63,19 @@ app.layout = html.Div([
     Output('line-graph', 'figure'),
     Input('term-selector', 'value'),
     Input('date-range-selector', 'start_date'),
-    Input('date-range-selector', 'end_date')
+    Input('date-range-selector', 'end_date'),
+    Input('reset-button', 'n_clicks'),
+    State('date-range-selector', 'start_date'),
+    State('date-range-selector', 'end_date')
 )
-def update_line_graph(selected_terms, start_date, end_date):
+def update_line_graph(selected_terms, start_date, end_date, reset_button_clicks, initial_start_date, initial_end_date):
     start_date = datetime.strptime(start_date, '%Y-%m-%d')
     end_date = datetime.strptime(end_date, '%Y-%m-%d')
-
-    # Create a line graph using Plotly
-    import plotly.graph_objs as go
+    # Check if the reset button was clicked and reset the date range
+    if reset_button_clicks > 0:
+        start_date = datetime.strptime(initial_start_date, '%Y-%m-%d')
+        end_date = datetime.strptime(initial_end_date, '%Y-%m-%d')
+        
 
     data_to_plot = []
 
