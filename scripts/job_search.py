@@ -1,3 +1,5 @@
+import sys
+print(f"SYSPATH!!!!: {sys.path}")
 from selenium import webdriver
 from selenium.webdriver.firefox.options import Options 
 # Switch to chromedriver for AWS
@@ -12,11 +14,13 @@ import threading
 import datetime
 import os
 from dotenv import load_dotenv
-import sys
+
 import numpy as np
 
-from utils import get_url, dict_to_json, get_job_data
-from globals import k
+
+
+from utils.utils import get_url, dict_to_json, get_job_data
+from utils.globals import k
         
 from collections import deque, defaultdict
 
