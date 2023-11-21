@@ -3,6 +3,8 @@ from airflow.operators.bash import BashOperator
 from datetime import datetime
 from datetime import timedelta
 import os
+import sys
+
 
 
 
@@ -29,17 +31,15 @@ dag = DAG(
 
 task_1 = BashOperator(
     task_id='task_1',
-    # bash_command = 'cd /opt/airflow/utils && ls',
-    bash_command = 'cd /opt/airflow/scripts && python add_techs.py',
-    # bash_command='python job_search.py',
+    bash_command = 'cd /opt/airflow/dags/scripts && python job_search.py',
     dag=dag,
 )
 
-task_2 = BashOperator(
-    task_id='task_2',
-    bash_command='python add_techs.py',
-    dag=dag
-)
+# task_2 = BashOperator(
+#     task_id='task_2',
+#     bash_command='python add_techs.py',
+#     dag=dag
+# )
 
 # task_3 = PythonOperator(
 #     task_id='task_3',
@@ -48,7 +48,9 @@ task_2 = BashOperator(
 #     dag=dag,
 # )
 
-task_1 >> task_2  # Have job search and add tech, ignore the check results for now.
+task_1  # start with just task 1 for now
+
+# task_1 >> task_2  # Have job search and add tech, ignore the check results for now.
 
 # task_1 >> task_2 >> task_3  # Set the task execution order
 

@@ -12,7 +12,7 @@ import openai
 import numpy as np
 
 
-from globals import k
+from utils.global_file import k
 
 
 def get_url(query:str, location:str, offset=0, days_ago=1):

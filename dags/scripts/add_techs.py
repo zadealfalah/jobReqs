@@ -2,7 +2,7 @@ import pickle
 from dotenv import load_dotenv
 import os
 import spacy
-from utils import dict_to_json
+from utils.util_file import dict_to_json
 import json
 import numpy as np
 import openai

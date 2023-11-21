@@ -1,5 +1,10 @@
 import sys
-print(f"SYSPATH!!!!: {sys.path}")
+# print(f"SYSPATH!!!!: {sys.path}")
+# sys.path.append(fr"C:\Users\Zade\Desktop\PythonStuff\jobReqs\jobReqs")
+sys.path.append("/opt/airflow/dags")
+# sys.path.append("/opt/airflow/utils")
+# print(f"SYSPATH!!!!: {sys.path}")
+
 from selenium import webdriver
 from selenium.webdriver.firefox.options import Options 
 # Switch to chromedriver for AWS
@@ -19,12 +24,10 @@ import numpy as np
 
 
 
-from utils.utils import get_url, dict_to_json, get_job_data
-from utils.globals import k
+from utils.util_file import get_url, dict_to_json, get_job_data
+from utils.global_file import k
         
 from collections import deque, defaultdict
-
-load_dotenv()        
 
 ### add check to see if file already exists for that day.
 date_info = datetime.datetime.now()
@@ -36,15 +39,25 @@ if os.path.isfile(json_file_name):
     print(f"Exiting job_search.py")
     sys.exit()
 
+# Hard code the vars for airflow testing - use airflow vars later
+max_threads = 10
+num_pages = 100
+num_iters = num_pages // max_threads
+keyword_list = ["data science", "data analyst", "data engineer", "machine learning engineer", "mlops"]
+location_list = ["remote"]
+days_ago=1 
+
+# load_dotenv()     
 
 # def max # threads - remember each needs a driver
-max_threads = int(os.getenv("max_threads"))
-num_pages = int(os.getenv("num_pages"))
-num_iters = num_pages // max_threads
-keyword_list = json.loads(os.getenv("keyword_list"))
-# keyword_list = ['mle'] # for testing
-location_list = json.loads(os.getenv("location_list"))
-days_ago = os.getenv("days_ago")
+# max_threads = int(os.getenv("max_threads"))
+# num_pages = int(os.getenv("num_pages"))
+# num_iters = num_pages // max_threads
+# keyword_list = json.loads(os.getenv("keyword_list"))
+# # keyword_list = ['mle'] # for testing
+# location_list = json.loads(os.getenv("location_list"))
+# days_ago = os.getenv("days_ago")   
+
 
 # init() #init the global job_data and job_id_list variables
 job_data =k["job_data"]
