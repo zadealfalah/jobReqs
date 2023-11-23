@@ -1,0 +1,9 @@
+data
+*.ipynb
+.gitattributes
+.gitignore
+README.md
+test.txt
+
+
+add_techs.py

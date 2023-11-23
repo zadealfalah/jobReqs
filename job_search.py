@@ -1,16 +1,16 @@
-import sys
-# print(f"SYSPATH!!!!: {sys.path}")
-# sys.path.append(fr"C:\Users\Zade\Desktop\PythonStuff\jobReqs\jobReqs")
-sys.path.append("/opt/airflow/dags")
-# sys.path.append("/opt/airflow/utils")
-# print(f"SYSPATH!!!!: {sys.path}")
-
-from selenium import webdriver
-from selenium.webdriver.firefox.options import Options 
-# Switch to chromedriver for AWS
-# from selenium.webdriver.chrome.options import Options
-# from selenium_stealth import stealth
 import time
+import sys
+from bs4 import BeautifulSoup
+from selenium import webdriver
+from selenium.webdriver.chrome.options import Options
+from selenium.webdriver.chrome.service import Service
+from webdriver_manager.chrome import ChromeDriverManager
+from urllib.parse import urlencode
+from collections import deque, defaultdict
+
+from selenium_stealth import stealth
+
+import random
 import json
 import re
 from bs4 import BeautifulSoup as bs
@@ -20,12 +20,10 @@ import datetime
 import os
 from dotenv import load_dotenv
 
-import numpy as np
+# import numpy as np
 
-
-
-from utils.util_file import get_url, dict_to_json, get_job_data
-from utils.global_file import k
+from util_file import get_url, dict_to_json, get_job_data
+from global_file import k
         
 from collections import deque, defaultdict
 
@@ -43,7 +41,8 @@ if os.path.isfile(json_file_name):
 max_threads = 10
 num_pages = 100
 num_iters = num_pages // max_threads
-keyword_list = ["data science", "data analyst", "data engineer", "machine learning engineer", "mlops"]
+# keyword_list = ["data science", "data analyst", "data engineer", "machine learning engineer", "mlops"]
+keyword_list=["data analyst"]
 location_list = ["remote"]
 days_ago=1 
 
@@ -72,15 +71,37 @@ print(f"Keywords: {keyword_list}")
 print(f"Locations: {location_list}")
 
 
+user_agents = [
+    # Add your list of user agents here
+	'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/109.0.0.0 Safari/537.36',
+    'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/109.0.0.0 Safari/537.36',
+    'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/108.0.0.0 Safari/537.36',
+    'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/108.0.0.0 Safari/537.36',
+    'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/108.0.0.0 Safari/537.36',
+    'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/16.1 Safari/605.1.15',
+    'Mozilla/5.0 (Macintosh; Intel Mac OS X 13_1) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/16.1 Safari/605.1.15',
+]
+
+
 def create_threaded_drivers(num_drivers=max_threads):
     threads = []
     options = Options()
     options.add_argument('--headless')
     options.add_argument('--no-sandbox')
-    options.add_argument('--single-process')
+    options.add_argument('--disable-gpu')
+    # options.add_argument('--single-process')
     options.add_argument('--disable-dev-shm-usage')
+    
+    options.add_argument('--disable-blink-features=AutomationControlled')
+    options.add_argument('--disable-popup-blocking')
+    options.add_argument('--start-maximized')
+    options.add_argument('--disable-extensions')
+    
+    user_agent=random.choice(user_agents)
+    options.add_argument(f'user-agent={user_agent}')
+    
     try:
-        driver_list = [webdriver.Firefox(options=options) for x in range(0, num_drivers)] # create max_threads num of drivers
+        driver_list = [webdriver.Chrome(service=Service(ChromeDriverManager().install()), options=options) for x in range(0, num_drivers)] # create max_threads num of drivers
         print(f"{len(driver_list)} drivers successfully created")
     except Exception as e:
         print(f"Error creating drivers: {e}")
@@ -89,6 +110,25 @@ def create_threaded_drivers(num_drivers=max_threads):
 
 threads, driver_list = create_threaded_drivers()
 end_create_drivers = time.time()
+
+
+# Try stealthing drivers
+def stealth_drivers(driver_list):
+    for driver in driver_list:
+        try:
+            print(f"Stealthing Driver")
+            stealth(driver,
+                    languages=["en-US", "en"],
+                    vendor="Google Inc.",
+                    platform="Win32",
+                    webgl_vendor="Intel Inc.",
+                    renderer="Intel Iris OpenGL Engine",
+                    fix_hairline=True,
+                    )
+        except Exception as e:
+            print(f"Error stealthing driver: {e}")
+            
+stealth_drivers(driver_list)
 
 
 # print(f"Searching for {keyword} in {location} on page {int((offset/10) + 1)}")
@@ -108,6 +148,7 @@ def get_job_ids(driver, keyword, location, offset, days_ago):
     try:
         driver.get(indeed_jobs_url)
         response = driver.page_source
+        print(response)
         script_tag = re.findall(r'window.mosaic.providerData\["mosaic-provider-jobcards"\]=(\{.+?\});', response)
         if script_tag is not None:
             json_blob = json.loads(script_tag[0])

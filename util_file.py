@@ -8,11 +8,11 @@ import threading
 import datetime
 import os
 from dotenv import load_dotenv
-import openai
-import numpy as np
+# import openai
+# import numpy as np
 
 
-from utils.global_file import k
+from global_file import k
 
 
 def get_url(query:str, location:str, offset=0, days_ago=1):

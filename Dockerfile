@@ -1,20 +1,15 @@
-FROM apache/airflow:2.7.3
+FROM python:3.10
 
-USER root
-# Install system-level dependencies
-RUN apt-get update && \
-    apt-get install -y wget bzip2 libxtst6 libgtk-3-0 libx11-xcb-dev libdbus-glib-1-2 libxt6 libpci-dev && \
-    rm -rf /var/lib/apt/lists/*
+WORKDIR /app
 
-USER airflow
-COPY requirements.txt /
+COPY . /app
 
-RUN echo ${AIRFLOW_VERSION}
+RUN pip install --trusted-host pypi.python.org -r requirements.txt
 
-# Upgrade pip
-RUN pip install --user --upgrade pip
+RUN apt-get update && apt-get install -y wget unzip && \
+    wget https://dl.google.com/linux/direct/google-chrome-stable_current_amd64.deb && \
+    apt install -y ./google-chrome-stable_current_amd64.deb && \
+    rm google-chrome-stable_current_amd64.deb && \
+    apt-get clean
 
-# Install Apache Airflow and Python dependencies
-RUN pip install --no-cache-dir "apache-airflow==${AIRFLOW_VERSION}" -r /requirements.txt
-
-RUN mkdir /home/airflow/.cache/selenium
+CMD ["python", "job_search.py"]
