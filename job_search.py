@@ -27,15 +27,21 @@ from global_file import k
         
 from collections import deque, defaultdict
 
-### add check to see if file already exists for that day.
-date_info = datetime.datetime.now()
-date_str = date_info.strftime('%d-%m-%y')
-full_time_str = date_info.strftime('%H:%M:%S-%d-%m-%y')
-json_file_name = fr"data/raw_data-{date_str}.json"
-if os.path.isfile(json_file_name):
-    print(f"{json_file_name} already exists!")
-    print(f"Exiting job_search.py")
-    sys.exit()
+## Not needed if running on AWS scheduled daily
+#  add check to see if file already exists for that day.
+# date_info = datetime.datetime.now()
+# date_str = date_info.strftime('%d-%m-%y')
+# full_time_str = date_info.strftime('%H:%M:%S-%d-%m-%y')
+# json_file_name = fr"data/raw_data-{date_str}.json"
+# if os.path.isfile(json_file_name):
+#     print(f"{json_file_name} already exists!")
+#     print(f"Exiting job_search.py")
+#     sys.exit()
+
+
+load_dotenv()
+
+
 
 # Hard code the vars for airflow testing - use airflow vars later
 max_threads = 10
