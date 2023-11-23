@@ -1,0 +1,10 @@
+data
+scripts
+dags
+utils
+.venv
+.gitattributes
+.gitignore
+README.md
+add_techs.py
+test.ipynb

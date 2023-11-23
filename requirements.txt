@@ -1,8 +1,10 @@
-selenium==4.15.2
+selenium==4.9.1
 beautifulsoup4==4.12.2
-python-dotenv==1.0.0
-pyarrow==11.0.0
-numpy
-spacy
-openai
-tenacity
+webdriver_manager==4.0.0
+lxml
+# python-dotenv==1.0.0
+# pyarrow
+# numpy
+# spacy
+# openai
+# tenacity
