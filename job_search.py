@@ -10,6 +10,8 @@ from collections import deque, defaultdict
 
 from selenium_stealth import stealth
 
+from botocore.session import Session
+
 import random
 import json
 import re
@@ -29,10 +31,10 @@ from collections import deque, defaultdict
 
 ## Not needed if running on AWS scheduled daily
 #  add check to see if file already exists for that day.
-# date_info = datetime.datetime.now()
-# date_str = date_info.strftime('%d-%m-%y')
+date_info = datetime.datetime.now()
+date_str = date_info.strftime('%d-%m-%y')
 # full_time_str = date_info.strftime('%H:%M:%S-%d-%m-%y')
-# json_file_name = fr"data/raw_data-{date_str}.json"
+json_file_name = fr"raw_data-{date_str}.json"
 # if os.path.isfile(json_file_name):
 #     print(f"{json_file_name} already exists!")
 #     print(f"Exiting job_search.py")
@@ -242,25 +244,48 @@ end_get_descs = time.time()
 
 ### Could add metadata inf on to json before saving it e.g. the time to run each part, time to complete, keywords used, etc.
 ### Would certainly save space in the json file names doing it like that too!
+### Remove metadata for now, will add logging instead
 
-job_data["metadata"] = {}
-job_data["metadata"]["keywords"] = keyword_list
-job_data["metadata"]["locations"] = location_list
-job_data["metadata"]["time_ran"] = full_time_str
-job_data["metadata"]["num_jobs"] = len(job_data.keys()) - 1
+# job_data["metadata"] = {}
+# job_data["metadata"]["keywords"] = keyword_list
+# job_data["metadata"]["locations"] = location_list
+# job_data["metadata"]["time_ran"] = full_time_str
+# job_data["metadata"]["num_jobs"] = len(job_data.keys()) - 1
 
-job_data["metadata"]["timings"] = {}
-job_data["metadata"]["timings"]["start_drivers"] = (end_create_drivers - start)
-job_data["metadata"]["timings"]["find_job_ids"] = (end_find_jobs - end_create_drivers)
-job_data["metadata"]["timings"]["get_job_descs"] = (end_get_descs - end_find_jobs)
+# job_data["metadata"]["timings"] = {}
+# job_data["metadata"]["timings"]["start_drivers"] = (end_create_drivers - start)
+# job_data["metadata"]["timings"]["find_job_ids"] = (end_find_jobs - end_create_drivers)
+# job_data["metadata"]["timings"]["get_job_descs"] = (end_get_descs - end_find_jobs)
 
 
 
 dict_to_json(job_data, json_file_name)
 print(f"New search saved to: {json_file_name}")
+
+# Set aws options here for now
+s3_bucketname = 'indeed-job-data'
+s3_destpath = f"data/raw_data-{date_str}.json"
+
+# Botocore session creation
+try:
+    session = Session() # all botocore config in env vars or via ECS task roles.
+    s3 = session.create_client('s3')
+except Exception as e:
+    print(f"Error creating S3 session: {e}")
+
+
+# Upload JSON to s3
+try:
+    with open(f"{json_file_name}", "rb") as data:
+        s3.upload_fileobj(data, s3_bucketname, s3_destpath)
+except Exception as e:
+    print(f"Error uploading file to bucket {s3_bucketname}")
+    print(f"Error: {e}")
+
 ## Don't think I need to close this as I can instead shut down
 ## The AWS instance.  Shutting them down takes ~30s so it would save a lot of time
 start_shutdown_driver = time.time()
+
 try:
     for driver in driver_list:
         driver.quit()
