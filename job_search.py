@@ -10,7 +10,7 @@ from collections import deque, defaultdict
 
 from selenium_stealth import stealth
 
-from botocore.session import Session
+import boto3
 
 import random
 import json
@@ -54,6 +54,7 @@ keyword_list=["data analyst"]
 location_list = ["remote"]
 days_ago=1 
 
+
 # load_dotenv()     
 
 # def max # threads - remember each needs a driver
@@ -91,15 +92,22 @@ user_agents = [
 ]
 
 
+chrome_driver_path = ChromeDriverManager().install()
+print(f"Chrome driver path: {chrome_driver_path}")
+os.system(f"chmod +x {chrome_driver_path}")
+
+
+
 def create_threaded_drivers(num_drivers=max_threads):
     threads = []
     options = Options()
-    options.add_argument('--headless')
     options.add_argument('--no-sandbox')
+    options.add_argument('--headless')
+    options.add_argument('--remote-debugging-port=9222')
     options.add_argument('--disable-gpu')
     # options.add_argument('--single-process')
     options.add_argument('--disable-dev-shm-usage')
-    
+    options.add_argument('--disable-setuid-sandbox')
     options.add_argument('--disable-blink-features=AutomationControlled')
     options.add_argument('--disable-popup-blocking')
     options.add_argument('--start-maximized')
@@ -267,20 +275,19 @@ s3_bucketname = 'indeed-job-data'
 s3_destpath = f"data/raw_data-{date_str}.json"
 
 # Botocore session creation
-try:
-    session = Session() # all botocore config in env vars or via ECS task roles.
-    s3 = session.create_client('s3')
-except Exception as e:
-    print(f"Error creating S3 session: {e}")
+# try:
+#     session = Session() # all botocore config in env vars or via ECS task roles.
+#     s3 = session.create_client('s3')
+# except Exception as e:
+#     print(f"Error creating S3 session: {e}")
 
+# Create s3 client
+s3_client = boto3.client('s3')
 
 # Upload JSON to s3
-try:
-    with open(f"{json_file_name}", "rb") as data:
-        s3.upload_fileobj(data, s3_bucketname, s3_destpath)
-except Exception as e:
-    print(f"Error uploading file to bucket {s3_bucketname}")
-    print(f"Error: {e}")
+s3_client.upload_file(json_file_name, s3_bucketname, s3_destpath)
+
+    
 
 ## Don't think I need to close this as I can instead shut down
 ## The AWS instance.  Shutting them down takes ~30s so it would save a lot of time

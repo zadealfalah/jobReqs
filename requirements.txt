@@ -4,4 +4,5 @@ webdriver_manager==4.0.0
 lxml
 python-dotenv==1.0.0
 selenium-stealth
-botocore
+# botocore
+boto3
