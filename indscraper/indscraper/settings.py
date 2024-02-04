@@ -12,7 +12,7 @@ BOT_NAME = "indscraper"
 SPIDER_MODULES = ["indscraper.spiders"]
 NEWSPIDER_MODULE = "indscraper.spiders"
 
-SCRAPEOPS_API_KEY = '940bcda4-35d2-4d94-aabe-613ba0c271f2'
+SCRAPEOPS_API_KEY = 'adf10161-9b46-49ed-9123-02d87d09e985'
 SCRAPEOPS_PROXY_ENABLED = True
 
 ## Default to s3 bucket in the future.  Placeholder w/ json for now.

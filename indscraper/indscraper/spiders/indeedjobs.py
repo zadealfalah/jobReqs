@@ -30,8 +30,8 @@ class IndeedjobsSpider(scrapy.Spider):
 
 
     def start_requests(self):
-        # keyword_list = ['data science', 'data analyst', 'data engineer', 'machine learning']
-        keyword_list = ['data science', 'data scientist']
+        keyword_list = ['data science', 'data analyst', 'data engineer', 'machine learning engineer']
+        # keyword_list = ['data science', 'data scientist']
         location_list = ['remote']
         for keyword in keyword_list:
             for location in location_list:
@@ -58,8 +58,8 @@ class IndeedjobsSpider(scrapy.Spider):
                     num_results = 50
                 
                 job_urls = set()
-                # for offset in range(0, num_results + 10, 10):
-                for offset in range(0, 10, 10):  # testing amount, only first page
+                for offset in range(0, num_results + 10, 10):
+                # for offset in range(0, 10, 10):  # testing amount, only first page
                     url = self.get_indeed_search_url(keyword, location, offset, fromage)
                     yield scrapy.Request(url=url, callback=self.parse_search_results, meta={'keyword': keyword, 'location': location, 'offset': offset, 'fromage': fromage, 'job_urls': job_urls})
 

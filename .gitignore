@@ -163,3 +163,9 @@ init_templates/user.html
 init_templates/view.html
 init_flask_app.py
 
+
+# Scrapeops api key hiding for now
+settings.py
+
+# All ipynbs
+*.ipynb
