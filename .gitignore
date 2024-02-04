@@ -171,3 +171,4 @@ init_flask_app.py
 *.ipynb
 indscraper/indscraper/settings.py
 indscraper/indscraper/settings.py
+indscraper/indscraper/settings.py
