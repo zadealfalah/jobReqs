@@ -8,10 +8,16 @@
 from itemadapter import ItemAdapter
 from bs4 import BeautifulSoup as bs
 import json
+import boto3
+from botocore.exceptions import NoCredentialsError
 
 class IndscraperPipeline:
-    def __init__(self):
+    def __init__(self, aws_access_key_id=None, aws_secret_access_key=None, s3_bucket=None, s3_path=None, save_to_s3=False):
         self.items = []
+        self.aws_access_key_id = aws_access_key_id
+        self.aws_secret_access_key = aws_secret_access_key
+        self.s3_bucket = s3_bucket
+        self.s3_path = s3_path
         
     def process_item(self, item, spider):
         
@@ -55,8 +61,29 @@ class IndscraperPipeline:
                 item['keyword'] = spider.job_links[job_key]
         
         # Write the updated items to the JSON file
-        output_file = getattr(spider, 'output_file', f'data/{spider.data_filename}_processed.json')
+        test_filename_string = f'data/{spider.data_filename}_processed.json'
+        
+        output_file = getattr(spider, 'output_file', test_filename_string)
         with open(output_file, 'w', encoding='utf-8') as f:
             for item in self.items:
                 line = json.dumps(dict(item)) + "\n"
                 f.write(line)
+                
+        if self.save_to_s3:
+            self.upload_to_s3(test_filename_string)
+        
+    def upload_to_s3(self, spider, filename):
+        s3 = boto3.client('s3', aws_access_key_id=self.aws_access_key_id, aws_secret_access_key=self.aws_secret_access_key)
+        
+        try:
+            s3.upload_fileobj(
+                Fileobj=filename,
+                Bucket=self.s3_bucket,
+                Key=self.s3_path,
+            )
+            spider.log(f"Successfully uploaded data to S3 bucket: {self.s3_bucket}/{self.s3_path}")
+            
+        except NoCredentialsError:
+            spider.log("AWS credentials not available. Upload to S3 failed.")
+        except Exception as e:
+            spider.log(f"Error uploading data to S3: {e}")

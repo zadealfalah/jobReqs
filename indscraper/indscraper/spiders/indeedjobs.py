@@ -16,11 +16,11 @@ class IndeedjobsSpider(scrapy.Spider):
     
     job_links = {}
 
-    data_filename = f"test_replace_{todays_date}.json"
+    data_filename = f"test_replace_{todays_date}"
     ## Overwrite settings.py, set format to json and to overwrite the file when we run the spider
     custom_settings = {
         'FEEDS' : {
-            f'data/{data_filename}' : {'format':'json', 'overwrite':True},
+            f'data/{data_filename}.json' : {'format':'json', 'overwrite':True},
         },
         'output_file': f'data/{data_filename}_processed.json',
     }
@@ -31,8 +31,8 @@ class IndeedjobsSpider(scrapy.Spider):
 
 
     def start_requests(self):
-        keyword_list = ['data science', 'data analyst', 'data engineer', 'machine learning engineer']
-        # keyword_list = ['data science', 'data scientist']
+        # keyword_list = ['data science', 'data analyst', 'data engineer', 'machine learning engineer']
+        keyword_list = ['data science', 'data scientist']  # Testing multiple keyword results
         location_list = ['remote']
         for keyword in keyword_list:
             for location in location_list:
@@ -46,6 +46,7 @@ class IndeedjobsSpider(scrapy.Spider):
         offset = response.meta['offset'] 
         fromage = response.meta['fromage']
         # visited_urls = response.meta.get('visited_urls', set())
+        job_urls = set()
         
         script_tag  = re.findall(r'window.mosaic.providerData\["mosaic-provider-jobcards"\]=(\{.+?\});', response.text)
         if script_tag is not None:
@@ -58,7 +59,6 @@ class IndeedjobsSpider(scrapy.Spider):
                 if num_results > 1000: # To generate the offsets
                     num_results = 50
                 
-                job_urls = set()
                 for offset in range(0, num_results + 10, 10):
                 # for offset in range(0, 10, 10):  # testing amount, only first page
                     url = self.get_indeed_search_url(keyword, location, offset, fromage)
@@ -70,11 +70,11 @@ class IndeedjobsSpider(scrapy.Spider):
                 if job.get('jobkey') is not None:
                     job_url = 'https://www.indeed.com/m/basecamp/viewjob?viewtype=embedded&jk=' + job.get('jobkey')
                     try:
-                        self.log(f"Job key {job.get('jobkey')} already seen. Adding keyword {keyword} to job_links")
                         self.job_links[job.get('jobkey')] += [keyword]
+                        self.log(f"Job key {job.get('jobkey')} already seen. Adding keyword {keyword} to job_links")
                     except KeyError:
-                        self.log(f"Job key {job.get('jobkey')} not yet seen. Adding keyword {keyword} to job_links")
                         self.job_links[job.get('jobkey')] = [keyword]
+                        self.log(f"Job key {job.get('jobkey')} not yet seen. Adding keyword {keyword} to job_links")
                     job_urls.add(job_url)
                     yield scrapy.Request(url=job_url, 
                             callback=self.parse_job, 
