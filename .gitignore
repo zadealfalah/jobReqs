@@ -165,7 +165,7 @@ init_flask_app.py
 
 
 # Scrapeops api key hiding for now
-settings.py
+# settings.py
 
 # All ipynbs
 *.ipynb

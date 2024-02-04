@@ -5,6 +5,7 @@ from urllib.parse import urlencode
 from bs4 import BeautifulSoup as bs
 from indscraper.items import JobItem
 from datetime import datetime
+import os
 
 class IndeedjobsSpider(scrapy.Spider):
     name = "indeedjobs"
