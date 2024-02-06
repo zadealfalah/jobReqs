@@ -18,6 +18,7 @@ class IndscraperPipeline:
         self.aws_secret_access_key = aws_secret_access_key
         self.s3_bucket = s3_bucket
         self.s3_path = s3_path
+        self.save_to_s3 = save_to_s3
         
     def process_item(self, item, spider):
         

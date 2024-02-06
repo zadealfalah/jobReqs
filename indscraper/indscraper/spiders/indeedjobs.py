@@ -32,7 +32,7 @@ class IndeedjobsSpider(scrapy.Spider):
 
     def start_requests(self):
         # keyword_list = ['data science', 'data analyst', 'data engineer', 'machine learning engineer']
-        keyword_list = ['data science', 'data scientist']  # Testing multiple keyword results
+        keyword_list = ['data engineer', 'etl developer']  # Testing multiple keyword results
         location_list = ['remote']
         for keyword in keyword_list:
             for location in location_list:
@@ -69,12 +69,22 @@ class IndeedjobsSpider(scrapy.Spider):
             for index, job in enumerate(jobs_list):
                 if job.get('jobkey') is not None:
                     job_url = 'https://www.indeed.com/m/basecamp/viewjob?viewtype=embedded&jk=' + job.get('jobkey')
-                    try:
-                        self.job_links[job.get('jobkey')] += [keyword]
-                        self.log(f"Job key {job.get('jobkey')} already seen. Adding keyword {keyword} to job_links")
-                    except KeyError:
+                    if job.get('jobkey') in self.job_links: # Job already seen
+                        if keyword in self.job_links[job.get('jobkey')]: # Keyword already seen for this job
+                            self.log(f"Job key {job.get('jobkey')} already seen with keyword {keyword}")
+                        else: # Job already seen, but not with this keyword yet
+                            self.job_links[job.get('jobkey')] += [keyword]
+                            self.log(f"Job key {job.get('jobkey')} already seen, adding keyword {keyword}")
+                    else: # Job not yet seen
                         self.job_links[job.get('jobkey')] = [keyword]
-                        self.log(f"Job key {job.get('jobkey')} not yet seen. Adding keyword {keyword} to job_links")
+                        self.log(f"Job key {job.get('jobkey')} not yet seen, adding with keyword {keyword}")
+                        
+                    # try:
+                    #     self.job_links[job.get('jobkey')] += [keyword]
+                    #     self.log(f"Job key {job.get('jobkey')} already seen. Adding keyword {keyword} to job_links")
+                    # except KeyError:
+                    #     self.job_links[job.get('jobkey')] = [keyword]
+                    #     self.log(f"Job key {job.get('jobkey')} not yet seen. Adding keyword {keyword} to job_links")
                     job_urls.add(job_url)
                     yield scrapy.Request(url=job_url, 
                             callback=self.parse_job, 
