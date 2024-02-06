@@ -5,6 +5,11 @@ import pickle
 import os
 import logging
 from dotenv import load_dotenv
+from openai import OpenAI
+from openai.error import RateLimitError
+import backoff
+import asyncio
+import aiohttp
 
 load_dotenv()
 
@@ -23,6 +28,18 @@ class TechIdentificationPipeline:
         formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
         file_handler.setFormatter(formatter)
         self.logger.addHandler(file_handler)
+        
+        
+        self.OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
+        self.GPT_MODEL=os.getenv("GPT_MODEL")
+        self.GPT_PROMPT=os.getenv("GPT_PROMPT")
+        self.EXAMPLE_TEXT_1=os.getenv("EXAMPLE_TEXT_1")
+        self.EXAMPLE_RESPONSE_1=os.getenv("EXAMPLE_RESPONSE_1")
+        self.EXAMPLE_TEXT_2=os.getenv("EXAMPLE_TEXT_2")
+        self.EXAMPLE_RESPONSE_2=os.getenv("EXAMPLE_RESPONSE_2")
+        self.EXAMPLE_PROMPT=os.getenv("EXAMPLE_PROMPT")
+        
+        self.system_prompt = f"{self.EXAMPLE_TEXT_1}\n{self.EXAMPLE_RESPONSE_1}\n{self.EXAMPLE_TEXT_2}\n{self.EXAMPLE_RESPONSE_2}\n"
         
     def read_data_lines(self):
         """Stores each line (job) into self.data
@@ -62,7 +79,7 @@ class TechIdentificationPipeline:
         
     def select_relevant_text(self, n=5):
         """Uses pretrained binary classifier to decide if a given section of jd is relevant to techs.  
-        Used to shorted number of tokens for GPT.  Adds split jds directly to each job in self.data
+        Used to shorted number of tokens for GPT.  Adds split jds directly to each job in self.data, rewrites self.filename.
 
         Args:
             data (list): List of jobs from read_data_lines()
@@ -105,10 +122,33 @@ class TechIdentificationPipeline:
             job['split_jd'] = split_jd.strip("\n")  # add on stripping the newlines from the cleaned descs to lower # tokens
             modified_data.append(job) # Store the whole job in the modified data list
         
+        ## Replace self.data with jobs from modified_data which have techs in them after cutting
+        self.data = [job for job in modified_data if len(job.get('split_jd', '')) > 1]
+        
         self.logger.info(f"Rewriting {self.filename} with updated jobs")
         with open(self.filename, 'w') as f:
-            for job in modified_data:
+            for job in self.data:
                 json.dump(job, f)
                 f.write('\n')
 
 
+    @backoff.on_exception(backoff.expo, aiohttp.ClientResponseError, max_tries=6)
+    async def ask_gpt(self, split_jd):
+        async with aiohttp.ClientSession() as session:
+            async with session.post('https://api.openai.com/v1/chat/completions', json={
+                "model": self.GPT_MODEL,  # Choose your model
+                "messages": [
+                    {"role": "system", "content": self.system_prompt},
+                    {"role": "user", "content": f"{self.EXAMPLE_PROMPT} {split_jd}"}
+                ]
+            }) as response:
+                return await response.json()
+
+    async def get_techs_from_gpt(self):
+        tasks = []
+        for job in self.data:
+            split_jd = job['split_jd']
+            tasks.append(self.ask_gpt(split_jd))
+        responses = await asyncio.gather(*tasks)
+        for job, response in zip(self.data, responses):
+            job['gpt_response'] = response
