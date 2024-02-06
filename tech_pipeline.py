@@ -5,11 +5,13 @@ import pickle
 import os
 import logging
 from dotenv import load_dotenv
+import openai
 from openai import OpenAI
-from openai.error import RateLimitError
-import backoff
+# import backoff
+from tenacity import retry, stop_after_attempt, wait_random_exponential
 import asyncio
 import aiohttp
+from aiohttp import ClientResponseError
 
 load_dotenv()
 
@@ -132,23 +134,49 @@ class TechIdentificationPipeline:
                 f.write('\n')
 
 
-    @backoff.on_exception(backoff.expo, aiohttp.ClientResponseError, max_tries=6)
-    async def ask_gpt(self, split_jd):
-        async with aiohttp.ClientSession() as session:
-            async with session.post('https://api.openai.com/v1/chat/completions', json={
-                "model": self.GPT_MODEL,  # Choose your model
-                "messages": [
-                    {"role": "system", "content": self.system_prompt},
-                    {"role": "user", "content": f"{self.EXAMPLE_PROMPT} {split_jd}"}
-                ]
-            }) as response:
-                return await response.json()
 
-    async def get_techs_from_gpt(self):
+    
+    # @backoff.on_exception(backoff.expo, openai.RateLimitError, max_tries=6)
+    @retry(wait=wait_random_exponential(min=1, max=60), stop=stop_after_attempt(6))
+    async def ask_gpt(self, split_jd):
+        headers = {
+            "Authorization": f"Bearer {self.OPENAI_API_KEY}",
+            "Content-Type": "application/json"
+        }
+        async with aiohttp.ClientSession(headers=headers) as session:
+            try:
+                async with session.post('https://api.openai.com/v1/chat/completions', json={
+                    "model": self.GPT_MODEL,
+                    "messages": [
+                        {"role": "system", "content": self.system_prompt},
+                        {"role": "user", "content": f"{self.EXAMPLE_PROMPT} {split_jd}"}
+                    ]
+                }) as response:
+                    return await response.json()
+            except ClientResponseError as e:
+                if e.status == 429:  # Rate limit exceeded error
+                    logging.warning(f"Rate limit exceeded in ask_gpt method: {e}")
+                    raise e
+                else:
+                    logging.warning(f"Unexpected error occurred in ask_gpt method: {e}")
+                    raise e
+            except Exception as e:
+                logging.warning(f"Unexpected error occurred in ask_gpt method: {e}")
+                raise e
+
+    async def fetch_gpt_techs(self):
+        self.logger.info(f"Getting techs from gpt {self.GPT_MODEL}")
         tasks = []
         for job in self.data:
             split_jd = job['split_jd']
             tasks.append(self.ask_gpt(split_jd))
         responses = await asyncio.gather(*tasks)
         for job, response in zip(self.data, responses):
+            # job['gpt_response'] = [x.lower() for x in response["choices"][0]["message"]["content"].split(", ")] # Get the tech list and lowercase it
             job['gpt_response'] = response
+            
+        self.logger.info(f"Rewriting {self.filename} with gpt techs")
+        with open(self.filename, 'w') as f:
+            for job in self.data:
+                json.dump(job, f)
+                f.write('\n')
