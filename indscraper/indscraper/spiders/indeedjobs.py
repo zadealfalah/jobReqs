@@ -7,6 +7,7 @@ from indscraper.items import JobItem
 from datetime import datetime
 import os
 
+
 class IndeedjobsSpider(scrapy.Spider):
     name = "indeedjobs"
     allowed_domains = ["www.indeed.com", "proxy.scrapeops.io"]
@@ -16,13 +17,13 @@ class IndeedjobsSpider(scrapy.Spider):
     
     job_links = {}
 
-    data_filename = f"test_replace_{todays_date}"
+    data_filename = f"indeed_{todays_date}"
     ## Overwrite settings.py, set format to json and to overwrite the file when we run the spider
     custom_settings = {
-        'FEEDS' : {
-            f'data/{data_filename}.json' : {'format':'json', 'overwrite':True},
-        },
-        'output_file': f'data/{data_filename}_processed.json',
+        # 'FEEDS' : {
+        #     f'data/{data_filename}.json' : {'format':'json', 'overwrite':True},
+        # },
+        'output_file': f'{data_filename}.json',
     }
     
     def get_indeed_search_url(self, keyword, location, offset=0, fromage=1): #age in terms of # days
@@ -32,8 +33,10 @@ class IndeedjobsSpider(scrapy.Spider):
 
     def start_requests(self):
         # keyword_list = ['data science', 'data analyst', 'data engineer', 'machine learning engineer']
-        keyword_list = ['data engineer', 'etl developer']  # Testing multiple keyword results
-        location_list = ['remote']
+        # keyword_list = ['data engineer', 'etl developer']  # Testing multiple keyword results
+        # keyword_list = ['entry level data scientist'] # Testing with tiny amount of jobs
+        keyword_list = json.loads(os.getenv("keyword_list"))  # Actual list from env
+        location_list = json.loads(os.getenv("location_list"))
         for keyword in keyword_list:
             for location in location_list:
                 # self.logger.info(f"Searching for {keyword} in {location}")

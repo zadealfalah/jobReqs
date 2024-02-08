@@ -10,15 +10,20 @@ from bs4 import BeautifulSoup as bs
 import json
 import boto3
 from botocore.exceptions import NoCredentialsError
+import os
+from dotenv import load_dotenv
+
+load_dotenv()
 
 class IndscraperPipeline:
-    def __init__(self, aws_access_key_id=None, aws_secret_access_key=None, s3_bucket=None, s3_path=None, save_to_s3=False):
+    def __init__(self, AWS_ACCESS_KEY_ID=os.getenv("AWS_ACCESS_KEY_ID"), AWS_SECRET_ACCESS_KEY=os.getenv("AWS_SECRET_ACCESS_KEY"), 
+                 S3_BUCKET_NAME=os.getenv("S3_BUCKET_NAME"), S3_PATH_NAME=os.getenv("S3_PATH_NAME"), SAVE_TO_S3=os.getenv("SAVE_TO_S3")):
         self.items = []
-        self.aws_access_key_id = aws_access_key_id
-        self.aws_secret_access_key = aws_secret_access_key
-        self.s3_bucket = s3_bucket
-        self.s3_path = s3_path
-        self.save_to_s3 = save_to_s3
+        self.AWS_ACCESS_KEY_ID = AWS_ACCESS_KEY_ID
+        self.AWS_SECRET_ACCESS_KEY = AWS_SECRET_ACCESS_KEY
+        self.S3_BUCKET_NAME = S3_BUCKET_NAME
+        self.S3_PATH_NAME = S3_PATH_NAME
+        self.SAVE_TO_S3 = SAVE_TO_S3
         
     def process_item(self, item, spider):
         
@@ -62,27 +67,29 @@ class IndscraperPipeline:
                 item['keyword'] = spider.job_links[job_key]
         
         # Write the updated items to the JSON file
-        test_filename_string = f'data/{spider.data_filename}_processed.json'
+        test_filename_string = f'{spider.data_filename}.json'
         
         output_file = getattr(spider, 'output_file', test_filename_string)
-        with open(output_file, 'w', encoding='utf-8') as f:
+        with open(output_file, 'w+', encoding='utf-8') as f:
             for item in self.items:
                 line = json.dumps(dict(item)) + "\n"
                 f.write(line)
                 
-        if self.save_to_s3:
-            self.upload_to_s3(test_filename_string)
-        
+        if self.SAVE_TO_S3:
+            try:
+                self.upload_to_s3(spider=spider, filename=test_filename_string)
+                spider.log(f"{test_filename_string} saved to S3, deleting local copy")
+                os.remove(test_filename_string)
+            except Exception as e:
+                spider.log(f"Error with upload_to_s3: {e}")
+                spider.log(f"Keeping {test_filename_string} stored locally.")
     def upload_to_s3(self, spider, filename):
-        s3 = boto3.client('s3', aws_access_key_id=self.aws_access_key_id, aws_secret_access_key=self.aws_secret_access_key)
+        s3 = boto3.client('s3', aws_access_key_id=self.AWS_ACCESS_KEY_ID, aws_secret_access_key=self.AWS_SECRET_ACCESS_KEY)
         
         try:
-            s3.upload_fileobj(
-                Fileobj=filename,
-                Bucket=self.s3_bucket,
-                Key=self.s3_path,
-            )
-            spider.log(f"Successfully uploaded data to S3 bucket: {self.s3_bucket}/{self.s3_path}")
+            with open(filename, "rb") as f:
+                s3.upload_fileobj(f, self.S3_BUCKET_NAME, filename)
+            spider.log(f"Successfully uploaded {filename} to S3 bucket: {self.S3_BUCKET_NAME}")
             
         except NoCredentialsError:
             spider.log("AWS credentials not available. Upload to S3 failed.")
