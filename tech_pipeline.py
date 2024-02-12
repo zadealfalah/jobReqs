@@ -121,7 +121,7 @@ class TechIdentificationPipeline:
             zipped_paras = list(zip(split_text, pred_vals))
             # return(zipped_paras)
             split_jd = " ".join([text for (text, label) in zipped_paras if label == 1])
-            job['split_jd'] = split_jd.strip("\n")  # add on stripping the newlines from the cleaned descs to lower # tokens
+            job['split_jd'] = re.sub(r'\s*\n+\s*', ' ', split_jd)  # add on stripping the newlines from the cleaned descs to lower # tokens
             modified_data.append(job) # Store the whole job in the modified data list
         
         ## Replace self.data with jobs from modified_data which have techs in them after cutting
@@ -180,3 +180,30 @@ class TechIdentificationPipeline:
             for job in self.data:
                 json.dump(job, f)
                 f.write('\n')
+                
+    
+    def clean_gpt_response(self):
+        self.logger.info(f"Cleaning gpt responses")
+        for job in self.data:
+            full_gpt = job['gpt_response']
+            gpt_message = full_gpt['choices'][0]['message']['content']
+            common_response = "Return specific tools and technologies from the following text: "
+            if gpt_message.startswith("["): # Starts with a list
+                job['gpt_techs'] = gpt_message.lower()
+                self.logger.info(f"GPT techs {gpt_message.lower()} added to job {job['job_key']}")
+            elif gpt_message.startswith(common_response): # Starts with command given
+                self.logger.info(f"GPT Response includes command, cleaning")
+                gpt_techs = gpt_message[len(common_response):].lower().split(", ")
+                job['gpt_techs'] = gpt_techs
+                self.logger.info(f"GPT techs {gpt_techs} added to job {job['job_key']}")
+            else: # Some other kind of incorrect response
+                self.logger.info(f"GPT Response is non-standard")
+                job['gpt_techs'] = None
+                self.logger.warning(f"GPT techs for {job['job_key']} non-standard, added None to gpt_techs")
+                
+        self.logger.info(f"Overwriting {self.filename} with updated data")
+        with open(self.filename, 'w') as f:
+            for job in self.data:
+                json.dump(job, f)
+                f.write('\n')
+        self.logger.info(f"Data overwritten")
