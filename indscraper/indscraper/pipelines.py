@@ -88,8 +88,8 @@ class IndscraperPipeline:
         
         try:
             with open(filename, "rb") as f:
-                s3.upload_fileobj(f, self.S3_BUCKET_NAME, filename)
-            spider.log(f"Successfully uploaded {filename} to S3 bucket: {self.S3_BUCKET_NAME}")
+                s3.upload_fileobj(f, self.S3_BUCKET_NAME, fr"raw/{filename}")
+            spider.log(f"Successfully uploaded {filename} to S3 bucket: {self.S3_BUCKET_NAME}/raw")
             
         except NoCredentialsError:
             spider.log("AWS credentials not available. Upload to S3 failed.")

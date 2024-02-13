@@ -6,9 +6,9 @@ import os
 import logging
 from dotenv import load_dotenv
 import openai
-from openai import OpenAI
+from openai import OpenAI, AsyncOpenAI
 # import backoff
-from tenacity import retry, stop_after_attempt, wait_random_exponential
+# from tenacity import AsyncRetrying, RetryError, stop_after_attempt, wait_random_exponential
 import asyncio
 import aiohttp
 from aiohttp import ClientResponseError
@@ -26,7 +26,7 @@ class TechIdentificationPipeline:
         ## Logging
         self.logger = logging.getLogger("TechIdentificationPipeline")
         self.logger.setLevel(logging.INFO)
-        file_handler = logging.FileHandler("TechIdPipeline.log")
+        file_handler = logging.FileHandler(f"{self.filename}_pipeline.log")
         file_handler.setLevel(logging.INFO)
         formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
         file_handler.setFormatter(formatter)
@@ -42,6 +42,7 @@ class TechIdentificationPipeline:
         self.EXAMPLE_RESPONSE_2=os.getenv("EXAMPLE_RESPONSE_2")
         self.EXAMPLE_PROMPT=os.getenv("EXAMPLE_PROMPT")
         self.system_prompt = f"{self.EXAMPLE_TEXT_1}\n{self.EXAMPLE_RESPONSE_1}\n{self.EXAMPLE_TEXT_2}\n{self.EXAMPLE_RESPONSE_2}\n"
+        self.async_client = None
         
         ## Cleaning
         self.term_mapping = None # Don't read in automatically
@@ -158,7 +159,7 @@ class TechIdentificationPipeline:
         ## Replace self.data with jobs from modified_data which have techs in them after cutting
         self.data = [job for job in modified_data if len(job.get('split_jd', '')) > 1]
         
-        self.logger.info(f"Rewriting {self.filename} with updated jobs")
+        self.logger.info(f"Rewriting {self.filename} with relevant job descriptions")
         with open(self.filename, 'w') as f:
             for job in self.data:
                 json.dump(job, f)
@@ -169,63 +170,50 @@ class TechIdentificationPipeline:
     
     # def log_attempt_number(self, retry_state):
     #     self.logger.warning(f"Retrying GPT: {retry_state.attempt_number}...")
-    @retry(wait=wait_random_exponential(min=1, max=60), stop=stop_after_attempt(6))
-    async def ask_gpt(self, split_jd):
-        headers = {
-            "Authorization": f"Bearer {self.OPENAI_API_KEY}",
-            "Content-Type": "application/json"
-        }
-        async with aiohttp.ClientSession(headers=headers) as session:
+    async def ask_gpt_with_retry(self, split_jd):
+        retry_count = 0
+        while True:
             try:
-                async with session.post('https://api.openai.com/v1/chat/completions', json={
-                    "model": self.GPT_MODEL,
-                    "messages": [
+                response = await self.async_client.chat.completions.create(
+                    model=self.GPT_MODEL,
+                    messages=[
                         {"role": "system", "content": self.system_prompt},
                         {"role": "user", "content": f"{self.EXAMPLE_PROMPT} {split_jd}"}
                     ]
-                }) as response:
-                    response_json = await response.json()
-                    if response_json['error']:
-                        self.logger.warning(f"Rate limit exceeded in ask_gpt method")
-                        raise Exception
-                    return response_json
-            except ClientResponseError as e:
-                if e.status == 429:  # Rate limit exceeded error
-                    self.logger.warning(f"Rate limit exceeded in ask_gpt method: {e}")
-                    raise e
-                else:
-                    self.logger.warning(f"Unexpected error occurred in ask_gpt method: {e}")
-                    raise e
+                )
+                return response.json()
             except Exception as e:
-                self.logger.warning(f"Unexpected error occurred in ask_gpt method: {e}")
-                raise e
+                self.logger.warning(f"Error in gpt, retry #: {retry_count}")
+                retry_count += 1
+                if retry_count >= 6:
+                    raise e
 
     async def fetch_gpt_techs(self):
-        self.logger.info(f"Getting techs from gpt {self.GPT_MODEL}")
+        self.async_client = AsyncOpenAI(api_key=self.OPENAI_API_KEY)
         tasks = []
         for job in self.data:
             split_jd = job['split_jd']
-            tasks.append(self.ask_gpt(split_jd))
+            tasks.append(self.ask_gpt_with_retry(split_jd))
         responses = await asyncio.gather(*tasks)
         for job, response in zip(self.data, responses):
-            # job['gpt_response'] = [x.lower() for x in response["choices"][0]["message"]["content"].split(", ")] # Get the tech list and lowercase it
             job['gpt_response'] = response
-            
+
         self.logger.info(f"Rewriting {self.filename} with gpt techs")
         with open(self.filename, 'w') as f:
             for job in self.data:
                 json.dump(job, f)
                 f.write('\n')
                 
+                
     
     def clean_gpt_response(self):
         self.logger.info(f"Cleaning gpt responses")
         for job in self.data:
             full_gpt = job['gpt_response']
-            gpt_message = full_gpt['choices'][0]['message']['content']
-            common_response = "Return specific tools and technologies from the following text: "
+            gpt_message = json.loads(full_gpt)['choices'][0]['message']['content'].strip().replace('\n', '')
+            common_response = "Return specific tools and technologies from the following text:"
             if gpt_message.startswith("["): # Starts with a list
-                job['gpt_techs'] = gpt_message.lower()
+                job['gpt_techs'] = gpt_message.lower().strip()
                 # self.logger.info(f"GPT techs {gpt_message.lower()} added to job {job['job_key']}")
             elif gpt_message.startswith(common_response): # Starts with command given
                 self.logger.info(f"GPT Response includes command, cleaning")
@@ -233,7 +221,6 @@ class TechIdentificationPipeline:
                 job['gpt_techs'] = gpt_techs
                 # self.logger.info(f"GPT techs {gpt_techs} added to job {job['job_key']}")
             else: # Some other kind of incorrect response
-                self.logger.info(f"GPT Response is non-standard")
                 job['gpt_techs'] = None
                 self.logger.warning(f"GPT techs for {job['job_key']} non-standard, added None to gpt_techs")
                 self.logger.warning(f"GPT response was: {gpt_message}")
@@ -313,18 +300,21 @@ class TechIdentificationPipeline:
         self.logger.info(f"Cleaning gpt tech lists with cleaning resources")
         for job in self.data:
             gpt_tech_list = job['gpt_techs']
-            cleaned_techs = []
-            unique_techs = set() # Mapping ['aws glue', 'aws kinesis'] would give two ['aws'], so we want the uniques
-            print(f"{job['job_key']}, {gpt_tech_list}")
-            for tech in gpt_tech_list:
-                if not self.should_remove_exact(tech, self.terms_to_remove['to_remove_exact']) and not self.should_remove_partial(tech, self.terms_to_remove['to_remove_partial']):
-                    mapped_term = self.map_term(tech, self.term_mapping)
-                    if mapped_term not in unique_techs:
-                        unique_techs.add(mapped_term)
-                        cleaned_techs.append(mapped_term)
+            if gpt_tech_list: # At least 1 tech listed
+                cleaned_techs = []
+                unique_techs = set() # Mapping ['aws glue', 'aws kinesis'] would give two ['aws'], so we want the uniques
+                # print(f"{job['job_key']}, {gpt_tech_list}")
+                for tech in gpt_tech_list:
+                    if not self.should_remove_exact(tech, self.terms_to_remove['to_remove_exact']) and not self.should_remove_partial(tech, self.terms_to_remove['to_remove_partial']):
+                        mapped_term = self.map_term(tech, self.term_mapping)
+                        if mapped_term not in unique_techs:
+                            unique_techs.add(mapped_term)
+                            cleaned_techs.append(mapped_term)
+                        else:
+                            continue
                     else:
                         continue
-                else:
-                    continue
+            else:
+                continue
             job['cleaned_techs'] = cleaned_techs
         self.logger.info(f"Added leaned techs to job {job['job_key']}")
