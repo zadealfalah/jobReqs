@@ -13,12 +13,13 @@ import asyncio
 import aiohttp
 from aiohttp import ClientResponseError
 
+
 load_dotenv()
 
 class TechIdentificationPipeline:
-    def __init__(self, filename):
+    def __init__(self, filename, data=[]):
         self.filename = filename
-        self.data = []
+        self.data = data
         self.nlp = spacy.load("en_core_web_sm")
         self.clf = None # Don't read in automatically
         self.tfidf = None # Don't read in automatically
@@ -48,8 +49,8 @@ class TechIdentificationPipeline:
         self.term_mapping = None # Don't read in automatically
         self.terms_to_remove = None # Don't read in automatically
         
-    def read_data_lines(self):
-        """Stores each line (job) into self.data
+    def read_data_lines_from_file(self):
+        """Stores each line (job) into self.data assuming data file exists
 
         Args:
             filename (_type_): _description_
@@ -65,7 +66,7 @@ class TechIdentificationPipeline:
                         self.data += [json.loads(line)]
             except Exception as e:
                 self.logger.info(f"Error parsing {self.filename}: {e}")
-            
+    
     ###### Should add something to allow choices between various saved clf/tfidfs by version number.  Not needed for now
     def read_in_clf(self):
         try:
@@ -127,7 +128,7 @@ class TechIdentificationPipeline:
         """
         if self.data == []:
             self.logger.info(f"Data field is empty! Reading in data from {self.filename}")
-            self.read_data_lines()
+            self.read_data_lines_from_file()
         
         if self.clf == None:
             self.logger.info(f"Clf not yet read in.  Reading in now.")
@@ -318,3 +319,5 @@ class TechIdentificationPipeline:
                 continue
             job['cleaned_techs'] = cleaned_techs
         self.logger.info(f"Added leaned techs to job {job['job_key']}")
+        
+    

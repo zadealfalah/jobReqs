@@ -1,0 +1,15 @@
+version: '3'
+services:
+  indscraper:
+    build:
+      context: ./indscraper
+      dockerfile: Dockerfile
+
+
+  tech_pipe:
+    build:
+      context: ./tech_pipe
+      dockerfile: Dockerfile
+    environment:
+      SAVE_BUCKET_NAME: tech-bucket-indeed
+      SAVE_FOLDER_NAME: data

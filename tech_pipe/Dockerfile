@@ -1,13 +1,22 @@
-# Use the official Python image from Docker Hub
+# Lambda implementation here.
 FROM public.ecr.aws/lambda/python:3.10
 
-COPY requirements.txt ${LAMBDA_TASK_ROOT}
+# Set the working directory in the container
+WORKDIR /app
 
-RUN pip install -r requirements.txt
+# Copy full project dir to container
+COPY . /app
 
-COPY src/* ${LAMBDA_TASK_ROOT}
 
-CMD [ "main.handler" ]
+# Install other dependencies from requirements.txt
+COPY tech_requirements.txt ./
+RUN pip install --no-cache-dir -r tech_requirements.txt
+# Must be done after spacy install
+RUN python -m spacy download en_core_web_sm
+
+
+# Set the command to run the Scrapy crawl
+CMD ["python", "main.py"]
 
 
 
