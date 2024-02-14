@@ -177,3 +177,4 @@ indscraper/indscraper/settings.py
 
 *.pem
 *.ppk
+*.json
