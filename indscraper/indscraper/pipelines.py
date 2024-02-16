@@ -17,7 +17,7 @@ load_dotenv()
 
 class IndscraperPipeline:
     def __init__(self, AWS_ACCESS_KEY_ID=os.getenv("AWS_ACCESS_KEY_ID"), AWS_SECRET_ACCESS_KEY=os.getenv("AWS_SECRET_ACCESS_KEY"), 
-                 S3_BUCKET_NAME=os.getenv("S3_BUCKET_NAME"), S3_PATH_NAME=os.getenv("S3_PATH_NAME"), SAVE_TO_S3=os.getenv("SAVE_TO_S3")):
+                 S3_BUCKET_NAME=os.environ.get("S3_BUCKET_NAME"), S3_PATH_NAME=os.environ.get("S3_PATH_NAME"), SAVE_TO_S3=os.environ.get("SAVE_TO_S3")):
         self.items = []
         self.AWS_ACCESS_KEY_ID = AWS_ACCESS_KEY_ID
         self.AWS_SECRET_ACCESS_KEY = AWS_SECRET_ACCESS_KEY

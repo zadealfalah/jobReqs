@@ -35,13 +35,13 @@ class TechIdentificationPipeline:
         
         ## Gpt
         self.OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
-        self.GPT_MODEL=os.getenv("GPT_MODEL")
-        self.GPT_PROMPT=os.getenv("GPT_PROMPT")
-        self.EXAMPLE_TEXT_1=os.getenv("EXAMPLE_TEXT_1")
-        self.EXAMPLE_RESPONSE_1=os.getenv("EXAMPLE_RESPONSE_1")
-        self.EXAMPLE_TEXT_2=os.getenv("EXAMPLE_TEXT_2")
-        self.EXAMPLE_RESPONSE_2=os.getenv("EXAMPLE_RESPONSE_2")
-        self.EXAMPLE_PROMPT=os.getenv("EXAMPLE_PROMPT")
+        self.GPT_MODEL=os.environ.get("GPT_MODEL")
+        self.GPT_PROMPT=os.environ.get("GPT_PROMPT")
+        self.EXAMPLE_TEXT_1=os.environ.get("EXAMPLE_TEXT_1")
+        self.EXAMPLE_RESPONSE_1=os.environ.get("EXAMPLE_RESPONSE_1")
+        self.EXAMPLE_TEXT_2=os.environ.get("EXAMPLE_TEXT_2")
+        self.EXAMPLE_RESPONSE_2=os.environ.get("EXAMPLE_RESPONSE_2")
+        self.EXAMPLE_PROMPT=os.environ.get("EXAMPLE_PROMPT")
         self.system_prompt = f"{self.EXAMPLE_TEXT_1}\n{self.EXAMPLE_RESPONSE_1}\n{self.EXAMPLE_TEXT_2}\n{self.EXAMPLE_RESPONSE_2}\n"
         self.async_client = None
         

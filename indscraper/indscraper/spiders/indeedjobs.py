@@ -35,8 +35,8 @@ class IndeedjobsSpider(scrapy.Spider):
         # keyword_list = ['data science', 'data analyst', 'data engineer', 'machine learning engineer']
         # keyword_list = ['data engineer', 'etl developer']  # Testing multiple keyword results
         # keyword_list = ['entry level data scientist'] # Testing with tiny amount of jobs
-        keyword_list = json.loads(os.getenv("keyword_list"))  # Actual list from env
-        location_list = json.loads(os.getenv("location_list"))
+        keyword_list = json.loads(os.environ.get("keyword_list"))  # Actual list from env
+        location_list = json.loads(os.environ.get("location_list"))
         for keyword in keyword_list:
             for location in location_list:
                 # self.logger.info(f"Searching for {keyword} in {location}")
