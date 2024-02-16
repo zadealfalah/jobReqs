@@ -4,6 +4,8 @@ services:
     build:
       context: ./indscraper
       dockerfile: Dockerfile
+    volumes:
+      - ./config.yaml:/app/config.yaml
 
 
   tech_pipe:
@@ -13,3 +15,12 @@ services:
     environment:
       SAVE_BUCKET_NAME: tech-bucket-indeed
       SAVE_FOLDER_NAME: data
+      SAVED_CLF: job_desc_classifier_v1.0.pkl
+      SAVED_TFIDF: job_desc_tfidf_vectorizer_v1.0.pkl
+      GPT_MODEL: gpt-3.5-turbo
+      GPT_PROMPT: "You identify specific technologies from text and return a Python list of said technologies."
+      EXAMPLE_TEXT_1: "Return specific tools and technologies from the following text: Meta is seeking a Research Engineer to join our Large Language Model (LLM) Research team. We conduct focused research and engineering to build state-of-the-art LLMs, which we often open-source, like our team’s recent Llama 2.  Adapt standard machine learning methods to best exploit modern parallel environments (e.g. distributed clusters, multicore SMP, and GPU). Programming experience in Python and hands-on experience with frameworks such as PyTorch. \n  Exposure to architectural patterns of large scale software applications. Direct experience in generative AI and LLM research."
+      EXAMPLE_RESPONSE_1: "[llama 2, python, pytorch]"
+      EXAMPLE_TEXT_2: "Return specific tools and technologies from the following text: Proficiency in Python for data manipulation and analysis \n Prior experience in working with Spark SQL for data processing and querying \n Hands-on experience with Snowflake ETL processes and data integration \n Superior expertise in creating interactive dashboards and reports to present findings and key performance indicators (KPIs) using Tableau    \n Basic understanding of Airflow for simple job orchestration. Preferred Qualifications: \n \n Experience with cloud platforms like AWS, Azure \n Knowledge of statistical analysis and machine learning concepts \n Familiarity with data modeling and database design \n Familiarity with data visualization tools other than Tableau (e.g., Power BI) \n \n"
+      EXAMPLE_RESPONSE_2: "[python, spark, sql, snowflake, tableau, airflow, aws, azure, power bi]"
+      EXAMPLE_PROMPT: "Return specific tools and technologies from the following text:"

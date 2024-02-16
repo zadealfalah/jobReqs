@@ -6,9 +6,11 @@ from bs4 import BeautifulSoup as bs
 from indscraper.items import JobItem
 from datetime import datetime
 import os
+import yaml
 
 
-class IndeedjobsSpider(scrapy.Spider):
+
+class IndeedjobsSpider(scrapy.Spider): 
     name = "indeedjobs"
     allowed_domains = ["www.indeed.com", "proxy.scrapeops.io"]
     start_urls = ["https://www.indeed.com"]
@@ -26,6 +28,12 @@ class IndeedjobsSpider(scrapy.Spider):
         'output_file': f'{data_filename}.json',
     }
     
+    def __init__(self, category=None, *args, **kwargs):
+        super(IndeedjobsSpider, self).__init__(*args, **kwargs)
+        with open('/app/config.yaml', 'r') as f:
+            self.config = yaml.safe_load(f)
+    
+    
     def get_indeed_search_url(self, keyword, location, offset=0, fromage=1): #age in terms of # days
         parameters = {"q": keyword, "l": location, "filter": 0, "start": offset, "fromage":fromage}
         return "https://www.indeed.com/jobs?" + urlencode(parameters)
@@ -35,8 +43,10 @@ class IndeedjobsSpider(scrapy.Spider):
         # keyword_list = ['data science', 'data analyst', 'data engineer', 'machine learning engineer']
         # keyword_list = ['data engineer', 'etl developer']  # Testing multiple keyword results
         # keyword_list = ['entry level data scientist'] # Testing with tiny amount of jobs
-        keyword_list = json.loads(os.environ.get("keyword_list"))  # Actual list from env
-        location_list = json.loads(os.environ.get("location_list"))
+        keyword_list = self.config['keyword_list']  # Actual list from env
+        location_list = self.config['location_list']
+        # keyword_list = json.loads(os.environ["keyword_list"])
+        # location_list = json.loads(os.environ["location_list"])
         for keyword in keyword_list:
             for location in location_list:
                 # self.logger.info(f"Searching for {keyword} in {location}")

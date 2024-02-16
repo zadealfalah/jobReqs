@@ -12,18 +12,22 @@ import boto3
 from botocore.exceptions import NoCredentialsError, ClientError
 import os
 from dotenv import load_dotenv
+import yaml
 
 load_dotenv()
 
 class IndscraperPipeline:
     def __init__(self, AWS_ACCESS_KEY_ID=os.getenv("AWS_ACCESS_KEY_ID"), AWS_SECRET_ACCESS_KEY=os.getenv("AWS_SECRET_ACCESS_KEY"), 
-                 S3_BUCKET_NAME=os.environ.get("S3_BUCKET_NAME"), S3_PATH_NAME=os.environ.get("S3_PATH_NAME"), SAVE_TO_S3=os.environ.get("SAVE_TO_S3")):
+                 S3_PATH_NAME=os.environ.get("S3_PATH_NAME")):
+        with open('/app/config.yaml', 'r') as f:
+            self.config = yaml.safe_load(f)
         self.items = []
         self.AWS_ACCESS_KEY_ID = AWS_ACCESS_KEY_ID
         self.AWS_SECRET_ACCESS_KEY = AWS_SECRET_ACCESS_KEY
-        self.S3_BUCKET_NAME = S3_BUCKET_NAME
+        self.S3_BUCKET_NAME = self.config['S3_BUCKET_NAME']
         self.S3_PATH_NAME = S3_PATH_NAME
-        self.SAVE_TO_S3 = SAVE_TO_S3
+        self.SAVE_TO_S3 = self.config['SAVE_TO_S3']
+
         
     def process_item(self, item, spider):
         
@@ -104,6 +108,6 @@ class IndscraperPipeline:
                 except OSError as e:
                     self.log(f"Error renaming file to {new_filename_string}, file stored locally")
             else:
-                spider.log(f"Client error uploading to S3: {e}")
+                spider.log(f"Client error uploading to S3 bucket {self.S3_BUCKET_NAME}: {e}")
         except Exception as e:
-            spider.log(f"Error uploading data to S3: {e}")
+            spider.log(f"Error uploading data to S3 bucket {self.S3_BUCKET_NAME}: {e}")

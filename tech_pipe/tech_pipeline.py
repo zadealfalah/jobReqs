@@ -25,13 +25,15 @@ class TechIdentificationPipeline:
         self.tfidf = None # Don't read in automatically
         
         ## Logging
-        self.logger = logging.getLogger("TechIdentificationPipeline")
-        self.logger.setLevel(logging.INFO)
-        file_handler = logging.FileHandler(f"{self.filename}_pipeline.log")
-        file_handler.setLevel(logging.INFO)
-        formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
-        file_handler.setFormatter(formatter)
-        self.logger.addHandler(file_handler)
+        self.logger = logging.getLogger().setLevel(logging.INFO)
+        ## For logging locally, can remove
+        # self.logger = logging.getLogger("TechIdentificationPipeline")
+        # self.logger.setLevel(logging.INFO)
+        # file_handler = logging.FileHandler(f"{self.filename}_pipeline.log")
+        # file_handler.setLevel(logging.INFO)
+        # formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+        # file_handler.setFormatter(formatter)
+        # self.logger.addHandler(file_handler)
         
         ## Gpt
         self.OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
@@ -82,12 +84,12 @@ class TechIdentificationPipeline:
                                 self.logger.info("Classifier loaded")
                             return  # Exit the function after loading the classifier
                     else:
-                        self.logger.error("No classifier file found in classifier_models folder")
+                        self.logger.warning("No classifier file found in classifier_models folder")
                         return
             else:
-                self.logger.error("classifier_models folder not found")
+                self.logger.warning("classifier_models folder not found")
         except Exception as e:
-            self.logger.error(f"Error reading in clf: {e}")
+            self.logger.warning(f"Error reading in clf: {e}")
     
     def read_in_tfidf(self):
         try:
@@ -103,12 +105,12 @@ class TechIdentificationPipeline:
                                 self.logger.info("Tfidf loaded")
                             return  # Exit the function after loading the classifier
                     else:
-                        self.logger.error("No tfidf file found in classifier_models folder")
+                        self.logger.warning("No tfidf file found in classifier_models folder")
                         return
             else:
-                self.logger.error("classifier_models folder not found")
+                self.logger.warning("classifier_models folder not found")
         except Exception as e:
-            self.logger.error(f"Error reading in tfidf: {e}")
+            self.logger.warning(f"Error reading in tfidf: {e}")
     
     
         
@@ -266,9 +268,9 @@ class TechIdentificationPipeline:
                     return
                     
             else:
-                self.logger.error("classifier_models folder not found")
+                self.logger.warning("classifier_models folder not found")
         except Exception as e:
-            self.logger.error(f"Error reading in cleaning data: {e}")          
+            self.logger.warning(f"Error reading in cleaning data: {e}")          
 
 
     def map_term(self, tech, term_mapping):

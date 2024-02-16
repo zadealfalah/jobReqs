@@ -1,22 +1,14 @@
 # Lambda implementation here.
 FROM public.ecr.aws/lambda/python:3.10
 
-# Set the working directory in the container
-WORKDIR /app
-
 # Copy full project dir to container
-COPY . /app
+COPY . ${LAMBDA_TASK_ROOT}
 
-
-# Install other dependencies from requirements.txt
-COPY tech_requirements.txt ./
-RUN pip install --no-cache-dir -r tech_requirements.txt
+RUN pip install -r tech_requirements.txt
 # Must be done after spacy install
 RUN python -m spacy download en_core_web_sm
 
-
-# Set the command to run the Scrapy crawl
-CMD ["python", "main.py"]
+CMD ["main.handler"]
 
 
 

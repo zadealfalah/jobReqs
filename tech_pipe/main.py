@@ -3,8 +3,11 @@ import boto3
 import json
 import os
 import asyncio
+from dotenv import load_dotenv
 
-s3 = boto3.client('s3', aws_access_key_id=os.getenv("AWS_ACCESS_KEY_ID"), aws_secret_access_key=os.getenv("AWS_SECRET_ACCESS_KEY"))
+
+load_dotenv()
+s3 = boto3.client('s3')
 
 
 async def fetch_gpt_funct(event, context, pipeline):
@@ -33,6 +36,7 @@ def upload_to_s3(data, object_key):
         print(f"Error saving data to {save_bucket_name}")
 
 def handler(event, context):
+
     # Get bucket and file name
     bucket = event['Records'][0]['s3']['bucket']['name']
     key = event['Records'][0]['s3']['object']['key']
