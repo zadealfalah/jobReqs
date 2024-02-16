@@ -9,7 +9,7 @@ from itemadapter import ItemAdapter
 from bs4 import BeautifulSoup as bs
 import json
 import boto3
-from botocore.exceptions import NoCredentialsError
+from botocore.exceptions import NoCredentialsError, ClientError
 import os
 from dotenv import load_dotenv
 
@@ -88,10 +88,22 @@ class IndscraperPipeline:
         
         try:
             with open(filename, "rb") as f:
-                s3.upload_fileobj(f, self.S3_BUCKET_NAME, fr"raw/{filename}")
-            spider.log(f"Successfully uploaded {filename} to S3 bucket: {self.S3_BUCKET_NAME}/raw")
+                s3.upload_fileobj(f, self.S3_BUCKET_NAME, fr"data/{filename}")
+            spider.log(f"Successfully uploaded {filename} to S3 bucket: {self.S3_BUCKET_NAME}/data")
             
         except NoCredentialsError:
             spider.log("AWS credentials not available. Upload to S3 failed.")
+        except ClientError as e:
+            if e.response['Error']['Code'] == 'KeyAlreadyExists':
+                spider.log(f"Filename (key) {filename} already exists in {self.S3_BUCKET_NAME}/data.")
+                new_filename_string = f"new_{filename}"
+                try:
+                    os.rename(filename, new_filename_string)
+                    spider.log(f"Changed {filename} to {new_filename_string}, re-trying save to s3")
+                    self.upload_to_s3(spider, filename=new_filename_string)
+                except OSError as e:
+                    self.log(f"Error renaming file to {new_filename_string}, file stored locally")
+            else:
+                spider.log(f"Client error uploading to S3: {e}")
         except Exception as e:
             spider.log(f"Error uploading data to S3: {e}")
