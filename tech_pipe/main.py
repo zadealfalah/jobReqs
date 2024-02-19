@@ -9,10 +9,11 @@ from dotenv import load_dotenv
 load_dotenv()
 s3 = boto3.client('s3')
 
+loop = asyncio.get_event_loop()
 
-async def fetch_gpt_funct(event, context, pipeline):
+async def fetch_gpt_funct(pipeline):
     await pipeline.fetch_gpt_techs()
-    return {"statusCode": 200, "body": "Success"}
+ 
 
 def upload_to_s3(data, object_key):
     save_bucket_name = os.environ.get("SAVE_BUCKET_NAME")
@@ -55,13 +56,21 @@ def handler(event, context):
     pipeline.read_in_cleaning()
     pipeline.select_relevant_text()
     
-    # Testing for async within handler
-    loop = asyncio.new_event_loop()
-    asyncio.set_event_loop(loop)
-    loop.run_until_complete(fetch_gpt_funct(event, context, pipeline))
+    # # Testing for async within handler
+    # loop = asyncio.new_event_loop()
+    # asyncio.set_event_loop(loop)
+    # loop.run_until_complete(fetch_gpt_funct(event, context, pipeline))
+    
+    print(f"Running fetch_gpt_funct with async")
+    # asyncio.run(pipeline.fetch_gpt_funct())
+    # loop.run_until_complete(fetch_gpt_funct)
+    loop.run_until_complete(fetch_gpt_funct(pipeline))
     
     
+    
+    print(f"Running clean_gpt_response()")
     pipeline.clean_gpt_response()
+    print(f"Running clean_tech_lists()")
     pipeline.clean_tech_lists()
     
     # Save result to new s3 bucket

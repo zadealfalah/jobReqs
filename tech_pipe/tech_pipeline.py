@@ -14,10 +14,10 @@ import aiohttp
 from aiohttp import ClientResponseError
 
 
-load_dotenv()
 
 class TechIdentificationPipeline:
     def __init__(self, filename, data=[]):
+        load_dotenv()
         self.filename = filename
         self.data = data
         self.nlp = spacy.load("en_core_web_sm")
@@ -25,7 +25,8 @@ class TechIdentificationPipeline:
         self.tfidf = None # Don't read in automatically
         
         ## Logging
-        self.logger = logging.getLogger().setLevel(logging.INFO)
+        self.logger = logging.getLogger()
+        self.logger.setLevel(logging.INFO)
         ## For logging locally, can remove
         # self.logger = logging.getLogger("TechIdentificationPipeline")
         # self.logger.setLevel(logging.INFO)
@@ -37,15 +38,16 @@ class TechIdentificationPipeline:
         
         ## Gpt
         self.OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
-        self.GPT_MODEL=os.environ.get("GPT_MODEL")
-        self.GPT_PROMPT=os.environ.get("GPT_PROMPT")
-        self.EXAMPLE_TEXT_1=os.environ.get("EXAMPLE_TEXT_1")
-        self.EXAMPLE_RESPONSE_1=os.environ.get("EXAMPLE_RESPONSE_1")
-        self.EXAMPLE_TEXT_2=os.environ.get("EXAMPLE_TEXT_2")
-        self.EXAMPLE_RESPONSE_2=os.environ.get("EXAMPLE_RESPONSE_2")
-        self.EXAMPLE_PROMPT=os.environ.get("EXAMPLE_PROMPT")
+        self.GPT_MODEL=str(os.environ.get("GPT_MODEL"))
+        print(f"gpt model: {self.GPT_MODEL}")
+        self.GPT_PROMPT=str(os.environ.get("GPT_PROMPT"))
+        self.EXAMPLE_TEXT_1=str(os.environ.get("EXAMPLE_TEXT_1"))
+        self.EXAMPLE_RESPONSE_1=str(os.environ.get("EXAMPLE_RESPONSE_1"))
+        self.EXAMPLE_TEXT_2=str(os.environ.get("EXAMPLE_TEXT_2"))
+        self.EXAMPLE_RESPONSE_2=str(os.environ.get("EXAMPLE_RESPONSE_2"))
+        self.EXAMPLE_PROMPT=str(os.environ.get("EXAMPLE_PROMPT"))
         self.system_prompt = f"{self.EXAMPLE_TEXT_1}\n{self.EXAMPLE_RESPONSE_1}\n{self.EXAMPLE_TEXT_2}\n{self.EXAMPLE_RESPONSE_2}\n"
-        self.async_client = None
+        # self.async_client = None
         
         ## Cleaning
         self.term_mapping = None # Don't read in automatically
@@ -84,12 +86,12 @@ class TechIdentificationPipeline:
                                 self.logger.info("Classifier loaded")
                             return  # Exit the function after loading the classifier
                     else:
-                        self.logger.warning("No classifier file found in classifier_models folder")
+                        self.logger.error("No classifier file found in classifier_models folder")
                         return
             else:
-                self.logger.warning("classifier_models folder not found")
+                self.logger.error("classifier_models folder not found")
         except Exception as e:
-            self.logger.warning(f"Error reading in clf: {e}")
+            self.logger.error(f"Error reading in clf: {e}")
     
     def read_in_tfidf(self):
         try:
@@ -105,12 +107,12 @@ class TechIdentificationPipeline:
                                 self.logger.info("Tfidf loaded")
                             return  # Exit the function after loading the classifier
                     else:
-                        self.logger.warning("No tfidf file found in classifier_models folder")
+                        self.logger.error("No tfidf file found in classifier_models folder")
                         return
             else:
-                self.logger.warning("classifier_models folder not found")
+                self.logger.error("classifier_models folder not found")
         except Exception as e:
-            self.logger.warning(f"Error reading in tfidf: {e}")
+            self.logger.error(f"Error reading in tfidf: {e}")
     
     
         
@@ -162,50 +164,54 @@ class TechIdentificationPipeline:
         ## Replace self.data with jobs from modified_data which have techs in them after cutting
         self.data = [job for job in modified_data if len(job.get('split_jd', '')) > 1]
         
-        self.logger.info(f"Rewriting {self.filename} with relevant job descriptions")
-        with open(self.filename, 'w') as f:
-            for job in self.data:
-                json.dump(job, f)
-                f.write('\n')
+        
+        ## Was for local use, not for aws implementation        
+        # self.logger.info(f"Rewriting {self.filename} with relevant job descriptions")
+        # with open(self.filename, 'w') as f:
+        #     for job in self.data:
+        #         json.dump(job, f)
+        #         f.write('\n')
     
     # class RateLimitError(Exception):
     #     pass
     
     # def log_attempt_number(self, retry_state):
     #     self.logger.warning(f"Retrying GPT: {retry_state.attempt_number}...")
-    async def ask_gpt_with_retry(self, split_jd):
+    async def ask_gpt_with_retry(self, split_jd, client):
         retry_count = 0
-        while True:
-            try:
-                response = await self.async_client.chat.completions.create(
-                    model=self.GPT_MODEL,
-                    messages=[
-                        {"role": "system", "content": self.system_prompt},
-                        {"role": "user", "content": f"{self.EXAMPLE_PROMPT} {split_jd}"}
-                    ]
-                )
-                return response.json()
-            except Exception as e:
-                self.logger.warning(f"Error in gpt, retry #: {retry_count}")
-                retry_count += 1
-                if retry_count >= 6:
-                    raise e
+        try:
+            response = await client.chat.completions.create(
+                model=self.GPT_MODEL,
+                messages=[
+                    {"role": "system", "content": self.system_prompt},
+                    {"role": "user", "content": f"{self.EXAMPLE_PROMPT} {split_jd}"}
+                ]
+            )
+            return response.model_dump_json()
+        except Exception as e:
+            self.logger.warning(f"Error in gpt, retry #: {retry_count}")
+            self.logger.warning(f"Error in gpt request, error: {e}")
+            retry_count += 1
+            if retry_count >= 6:
+                raise e
 
     async def fetch_gpt_techs(self):
-        self.async_client = AsyncOpenAI(api_key=self.OPENAI_API_KEY)
+        async_client = AsyncOpenAI(api_key=self.OPENAI_API_KEY)
+        print(f"Async client type: {type(async_client)}")
         tasks = []
         for job in self.data:
             split_jd = job['split_jd']
-            tasks.append(self.ask_gpt_with_retry(split_jd))
+            tasks.append(self.ask_gpt_with_retry(split_jd, client=async_client))
         responses = await asyncio.gather(*tasks)
         for job, response in zip(self.data, responses):
             job['gpt_response'] = response
 
-        self.logger.info(f"Rewriting {self.filename} with gpt techs")
-        with open(self.filename, 'w') as f:
-            for job in self.data:
-                json.dump(job, f)
-                f.write('\n')
+        ## Was for local use, not for aws implementation        
+        # self.logger.info(f"Rewriting {self.filename} with gpt techs")
+        # with open(self.filename, 'w') as f:
+        #     for job in self.data:
+        #         json.dump(job, f)
+        #         f.write('\n')
                 
                 
     
@@ -213,9 +219,13 @@ class TechIdentificationPipeline:
         self.logger.info(f"Cleaning gpt responses")
         for job in self.data:
             full_gpt = job['gpt_response']
-            gpt_message = json.loads(full_gpt)['choices'][0]['message']['content'].strip().replace('\n', '')
+            try:
+                gpt_message = json.loads(full_gpt)['choices'][0]['message']['content'].strip().replace('\n', '')
+            except TypeError as e:
+                self.logger.warning(f"TypeError: {e}")
+                self.logger.warning(f"TypeError with gpt_message, message was: {gpt_message}")
             common_response = "Return specific tools and technologies from the following text:"
-            if gpt_message.startswith("["): # Starts with a list
+            if (gpt_message.startswith("\"[") | gpt_message.startswith("[")): # Starts with a list
                 job['gpt_techs'] = gpt_message.lower().strip()
                 # self.logger.info(f"GPT techs {gpt_message.lower()} added to job {job['job_key']}")
             elif gpt_message.startswith(common_response): # Starts with command given
@@ -227,13 +237,14 @@ class TechIdentificationPipeline:
                 job['gpt_techs'] = None
                 self.logger.warning(f"GPT techs for {job['job_key']} non-standard, added None to gpt_techs")
                 self.logger.warning(f"GPT response was: {gpt_message}")
-                
-        self.logger.info(f"Overwriting {self.filename} with updated data")
-        with open(self.filename, 'w') as f:
-            for job in self.data:
-                json.dump(job, f)
-                f.write('\n')
-        self.logger.info(f"Data overwritten")
+
+        ## Was for local use, not for aws implementation                        
+        # self.logger.info(f"Overwriting {self.filename} with updated data")
+        # with open(self.filename, 'w') as f:
+        #     for job in self.data:
+        #         json.dump(job, f)
+        #         f.write('\n')
+        # self.logger.info(f"Data overwritten")
         
         
     ## Cleaning tech list section

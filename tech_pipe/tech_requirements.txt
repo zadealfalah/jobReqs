@@ -4,3 +4,4 @@ spacy==3.7.3
 openai==1.11.1
 asyncio==3.4.3
 aiohttp==3.9.3
+scikit-learn==1.4.0
