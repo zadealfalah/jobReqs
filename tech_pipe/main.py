@@ -21,7 +21,7 @@ def upload_to_s3(data, object_key):
     try:
         json_data = json.dumps(data)
     except Exception as e:
-        print(f"Error with json dump")
+        print(f"Error with json dump: {e}")
     
     full_object_key = f"{save_bucket_folder}/{object_key}"
     
