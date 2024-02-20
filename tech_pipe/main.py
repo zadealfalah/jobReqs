@@ -32,18 +32,20 @@ def upload_to_s3(data, object_key):
             Key=full_object_key,
             Body=json_data
         )
-        print(f"Data saved to {save_bucket_name}")
+        print(f"Data saved as {full_object_key}")
     except Exception as e:
-        print(f"Error saving data to {save_bucket_name}")
+        print(f"Error saving data to {save_bucket_name}: {e}")
 
 def handler(event, context):
 
+    
+    
     # Get bucket and file name
     bucket = event['Records'][0]['s3']['bucket']['name']
     key = event['Records'][0]['s3']['object']['key']
     
     print(bucket)
-    print(key)
+    print(key) # This would be something like data/indeed_19_02_2024.json
     
     # Get our object
     response = s3.get_object(Bucket=bucket, Key=key)
@@ -55,15 +57,10 @@ def handler(event, context):
     
     pipeline.read_in_cleaning()
     pipeline.select_relevant_text()
-    
-    # # Testing for async within handler
-    # loop = asyncio.new_event_loop()
-    # asyncio.set_event_loop(loop)
-    # loop.run_until_complete(fetch_gpt_funct(event, context, pipeline))
+
     
     print(f"Running fetch_gpt_funct with async")
-    # asyncio.run(pipeline.fetch_gpt_funct())
-    # loop.run_until_complete(fetch_gpt_funct)
+
     loop.run_until_complete(fetch_gpt_funct(pipeline))
     
     
@@ -73,5 +70,8 @@ def handler(event, context):
     print(f"Running clean_tech_lists()")
     pipeline.clean_tech_lists()
     
+    # Remove prefixes from original key before uploading to s3
+    stripped_key = key.split("/")
+    
     # Save result to new s3 bucket
-    upload_to_s3(pipeline.data, key)
+    upload_to_s3(pipeline.data, stripped_key[-1])
