@@ -1,0 +1,11 @@
+keyword_list:
+  - "data scientist"
+  - "data analyst"
+  - "data engineer"
+
+location_list:
+  - "remote"
+
+SAVE_TO_S3: True
+S3_BUCKET_NAME: scrapy-bucket-indeed
+

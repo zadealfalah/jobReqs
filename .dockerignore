@@ -1,9 +1,19 @@
-data
-*.ipynb
-.gitattributes
+.git
 .gitignore
+node_modules
+npm-debug.log
+Dockerfile*
+docker-compose*
 README.md
-test.txt
+LICENSE
+.vscode
 
-
-add_techs.py
+test.ipynb
+TechIdPipeline.log
+tech_pipeline.py
+.env_old
+classifier_models
+__pycache__
+*.pem
+*.ppk
+*.ipynb
