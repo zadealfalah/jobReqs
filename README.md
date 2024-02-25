@@ -1,4 +1,6 @@
-# jobReqs - Python, AWS, openAI
+# LEGACY VERSION USING SELENIUM
+
+## jobReqs - Python, AWS, openAI
 
 ## Table of Contents
 * [General Info](#general-info)
