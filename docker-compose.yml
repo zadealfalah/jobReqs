@@ -12,3 +12,8 @@ services:
     build:
       context: ./tech_pipe
       dockerfile: Dockerfile
+
+  gpt_pipe:
+    build:
+      context: ./gpt_pipe
+      dockerfile: Dockerfile
