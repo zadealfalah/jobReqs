@@ -3,6 +3,7 @@ import boto3
 import json
 import os
 from dotenv import load_dotenv
+from io import StringIO
 
 
 load_dotenv()
@@ -13,7 +14,11 @@ def upload_to_s3(data, object_key):
     save_bucket_name = os.environ.get("SAVE_BUCKET_NAME")
     save_bucket_folder = os.environ.get("SAVE_FOLDER_NAME")
     try:
-        json_data = json.dumps(data)
+        # json_data = json.dumps(data)
+        with StringIO() as f:
+            for job in data:
+                json.dump(job, f)
+                f.write('\n')
     except Exception as e:
         print(f"Error with json dump: {e}")
     
@@ -24,9 +29,9 @@ def upload_to_s3(data, object_key):
         s3.put_object(
             Bucket=save_bucket_name,
             Key=full_object_key,
-            Body=json_data
+            Body=f.getvalue().encode('utf-8')
         )
-        print(f"Data saved as {full_object_key}")
+        print(f"Data saved as {full_object_key} in {save_bucket_name}")
     except Exception as e:
         print(f"Error saving data to {save_bucket_name}: {e}")
 

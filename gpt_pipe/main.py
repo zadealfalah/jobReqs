@@ -322,7 +322,7 @@ def num_tokens_consumed_from_request(
     encoding = tiktoken.get_encoding(token_encoding_name)
     # if completions request, tokens = prompt + n * max_tokens
     if api_endpoint.endswith("completions"):
-        max_tokens = request_json.get("max_tokens", 15)
+        max_tokens = request_json.get("max_tokens", 3000)
         n = request_json.get("n", 1)
         completion_tokens = n * max_tokens
 
@@ -417,6 +417,9 @@ def handler(event, context):
             max_tokens_per_minute=float(59999),
             token_encoding_name="cl100k_base", # Default, should work for tiktoken and 3.5-turbo
             max_attempts=int(5),
+            gpt_model=str(os.getenv("GPT_MODEL")), # testing with gpt-3.5-turbo for now
+            
+            
         )
     )
     
