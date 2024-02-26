@@ -36,7 +36,23 @@ logger.setLevel(logging.INFO)
 ## filename locally saved to '/tmp/' so we can do the following:
 ## filename = 'tmp/'+{key}
 ## s3.Bucket(bucketname).download_file(key, filename)
-
+        # process_api_requests_from_file(
+        #     requests_filepath=local_filename,
+        #     save_filepath=local_filename_saved,
+        #     requests_url="https://api.openai.com/v1/chat/completions",
+        #     api_key=str(os.getenv("OPENAI_API_KEY")),
+        #     max_requests_per_minute=float(500),
+        #     max_tokens_per_minute=float(59999),
+        #     token_encoding_name="cl100k_base", # Default, should work for tiktoken and 3.5-turbo
+        #     max_attempts=int(5),
+        #     gpt_model=str(os.getenv("GPT_MODEL")), # testing with gpt-3.5-turbo for now
+        #     gpt_init_prompt=str(os.getenv("GPT_PROMPT")),
+        #     gpt_example_1=str(os.getenv("EXAMPLE_TEXT_1")),
+        #     gpt_response_1=str(os.getenv("EXAMPLE_RESPONSE_1")),
+        #     gpt_example_2=str(os.getenv("EXAMPLE_TEXT_2")),
+        #     gpt_response_2=str(os.getenv("EXAMPLE_RESPONSE_2")),
+        #     gpt_question=str(os.getenv("EXAMPLE_PROMPT")),
+        #     gpt_temp=float(os.getenv("GPT_TEMP")),
 
 
 
@@ -49,6 +65,14 @@ async def process_api_requests_from_file(
     max_tokens_per_minute: float,
     token_encoding_name: str,
     max_attempts: int,
+    gpt_model: str,
+    gpt_init_prompt: str,
+    gpt_example_1: str,
+    gpt_response_1: str,
+    gpt_example_2: str,
+    gpt_response_2: str,
+    gpt_question: str,
+    gpt_temp: float
 ):
     """Processes API requests in parallel, throttling to stay under rate limits."""
     # constants
@@ -102,11 +126,24 @@ async def process_api_requests_from_file(
                         try:
                             # get new request
                             request_json = json.loads(next(requests))
+                            json_payload = {
+                                'model':gpt_model,
+                                'messages': [
+                                    {"role":"system", "content":f"{gpt_init_prompt}"},
+                                    {"role":"user", "content":f"{gpt_example_1}"},
+                                    {"role":"assistant", "content":f"{gpt_response_1}"},
+                                    {"role":"user", "content":f"{gpt_example_2}"},
+                                    {"role":"assistant", "content":f"{gpt_response_2}"},
+                                    {"role":"user", "content":f"{gpt_question} {request_json['split_jd']}"}
+                                ],
+                                'temperature': gpt_temp
+                            }
                             next_request = APIRequest(
                                 task_id=next(task_id_generator),
                                 request_json=request_json,
+                                json_payload=json_payload,
                                 token_consumption=num_tokens_consumed_from_request(
-                                    request_json, api_endpoint, token_encoding_name
+                                    request_json, api_endpoint, token_encoding_name, json_payload
                                 ),
                                 attempts_left=max_attempts,
                                 metadata=request_json.pop("metadata", None),
@@ -223,6 +260,7 @@ class APIRequest:
 
     task_id: int
     request_json: dict
+    json_payload: dict
     token_consumption: int
     attempts_left: int
     metadata: dict
@@ -242,7 +280,7 @@ class APIRequest:
         error = None
         try:
             async with session.post(
-                url=request_url, headers=request_header, json=self.request_json
+                url=request_url, headers=request_header, json=self.json_payload
             ) as response:
                 response = await response.json()
             if "error" in response:
@@ -317,19 +355,20 @@ def num_tokens_consumed_from_request(
     request_json: dict,
     api_endpoint: str,
     token_encoding_name: str,
+    json_payload: dict,
 ):
     """Count the number of tokens in the request. Only supports completion and embedding requests."""
     encoding = tiktoken.get_encoding(token_encoding_name)
     # if completions request, tokens = prompt + n * max_tokens
     if api_endpoint.endswith("completions"):
-        max_tokens = request_json.get("max_tokens", 3000)
-        n = request_json.get("n", 1)
+        max_tokens = json_payload.get("max_tokens", 3000)
+        n = json_payload.get("n", 1)
         completion_tokens = n * max_tokens
 
         # chat completions
         if api_endpoint.startswith("chat/"):
             num_tokens = 0
-            for message in request_json["messages"]:
+            for message in json_payload["messages"]:
                 num_tokens += 4  # every message follows <im_start>{role/name}\n{content}<im_end>\n
                 for key, value in message.items():
                     num_tokens += len(encoding.encode(value))
@@ -337,34 +376,21 @@ def num_tokens_consumed_from_request(
                         num_tokens -= 1  # role is always required and always 1 token
             num_tokens += 2  # every reply is primed with <im_start>assistant
             return num_tokens + completion_tokens
-        # normal completions
-        else:
-            prompt = request_json["prompt"]
-            if isinstance(prompt, str):  # single prompt
-                prompt_tokens = len(encoding.encode(prompt))
-                num_tokens = prompt_tokens + completion_tokens
-                return num_tokens
-            elif isinstance(prompt, list):  # multiple prompts
-                prompt_tokens = sum([len(encoding.encode(p)) for p in prompt])
-                num_tokens = prompt_tokens + completion_tokens * len(prompt)
-                return num_tokens
-            else:
-                raise TypeError(
-                    'Expecting either string or list of strings for "prompt" field in completion request'
-                )
-    # if embeddings request, tokens = input tokens
-    elif api_endpoint == "embeddings":
-        input = request_json["input"]
-        if isinstance(input, str):  # single input
-            num_tokens = len(encoding.encode(input))
-            return num_tokens
-        elif isinstance(input, list):  # multiple inputs
-            num_tokens = sum([len(encoding.encode(i)) for i in input])
-            return num_tokens
-        else:
-            raise TypeError(
-                'Expecting either string or list of strings for "inputs" field in embedding request'
-            )
+        # # normal completions, not relevant but may be in the future
+        # else:
+        #     prompt = request_json["prompt"]
+        #     if isinstance(prompt, str):  # single prompt
+        #         prompt_tokens = len(encoding.encode(prompt))
+        #         num_tokens = prompt_tokens + completion_tokens
+        #         return num_tokens
+        #     elif isinstance(prompt, list):  # multiple prompts
+        #         prompt_tokens = sum([len(encoding.encode(p)) for p in prompt])
+        #         num_tokens = prompt_tokens + completion_tokens * len(prompt)
+        #         return num_tokens
+        #     else:
+        #         raise TypeError(
+        #             'Expecting either string or list of strings for "prompt" field in completion request'
+        #         )
     # more logic needed to support other API calls (e.g., edits, inserts, DALL-E)
     else:
         raise NotImplementedError(
@@ -383,17 +409,17 @@ def task_id_generator_function():
 
 
 
-
-
-
+### Note lambda may persist /tmp folder arbitrarily. 
+### May need to delete /tmp occasionally, may want to set up a flag for it.
 
 def handler(event, context):
     
     bucket = event['Records'][0]['s3']['bucket']['name']
     key = event['Records'][0]['s3']['object']['key']
+
     
-    print(bucket)
-    print(key) # This would be something like data/indeed_19_02_2024.json
+    logger.info(f"Source bucket: {bucket}")
+    logger.info(f"File: {key}") # This would be something like data/indeed_19_02_2024.json
     
     try:
         local_filename = '/tmp/' + key # lambda saves to /tmp by default
@@ -406,7 +432,6 @@ def handler(event, context):
     
     local_filename_saved = f"/tmp/{key}_saved.jsonl"
     
-    
     asyncio.run(
         process_api_requests_from_file(
             requests_filepath=local_filename,
@@ -418,12 +443,33 @@ def handler(event, context):
             token_encoding_name="cl100k_base", # Default, should work for tiktoken and 3.5-turbo
             max_attempts=int(5),
             gpt_model=str(os.getenv("GPT_MODEL")), # testing with gpt-3.5-turbo for now
-            
-            
+            gpt_init_prompt=str(os.getenv("GPT_PROMPT")),
+            gpt_example_1=str(os.getenv("EXAMPLE_TEXT_1")),
+            gpt_response_1=str(os.getenv("EXAMPLE_RESPONSE_1")),
+            gpt_example_2=str(os.getenv("EXAMPLE_TEXT_2")),
+            gpt_response_2=str(os.getenv("EXAMPLE_RESPONSE_2")),
+            gpt_question=str(os.getenv("EXAMPLE_PROMPT")),
+            gpt_temp=float(os.getenv("GPT_TEMP")),
         )
     )
-    
 
+    # save to s3
+    save_bucket_name = os.environ.get("SAVE_BUCKET_NAME")
+    save_bucket_folder = os.environ.get("SAVE_FOLDER_NAME")
+    full_object_key = f"{save_bucket_folder}/{key}"
+    try:
+        with open(local_filename_saved, 'rb') as f:
+            jsonl_data = f.read()
+            
+            s3.put_object(
+                Bucket=save_bucket_name,
+                Key=full_object_key,
+                Body=jsonl_data
+            )
+        logger.info(f"File saved to {save_bucket_name}/{full_object_key}")
+    except Exception as e:
+        logger.error(f"Error saving {full_object_key} to S3 bucket {save_bucket_name}: {e}")
+            
 
     
     ##### old from pipeline
