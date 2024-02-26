@@ -407,6 +407,16 @@ def task_id_generator_function():
 
 
 
+## To check if all async events were actually ran before saving to s3
+## Should have same num lines for input and output files
+## May error with incorrect formatting of jsonl, double check formatting if discrepant
+def count_jsonl_lines(file_path):
+    line_count = 0
+    with open(file_path, 'r', encoding='utf-8') as f:
+        for line in f:
+            line_count += 1
+    return line_count
+
 
 
 ### Note lambda may persist /tmp folder arbitrarily. 
@@ -429,6 +439,8 @@ def handler(event, context):
         logger.error(f"Error downloading file locally to {local_filename}:")
         logger.error(e)
         raise
+    
+    init_num_lines = count_jsonl_lines(local_filename)
     
     local_filename_saved = f"/tmp/{key}_saved.jsonl"
     
@@ -453,6 +465,9 @@ def handler(event, context):
         )
     )
 
+    final_num_lines = count_jsonl_lines(local_filename_saved)
+    
+    
     # save to s3
     save_bucket_name = os.environ.get("SAVE_BUCKET_NAME")
     save_bucket_folder = os.environ.get("SAVE_FOLDER_NAME")
@@ -470,8 +485,13 @@ def handler(event, context):
     except Exception as e:
         logger.error(f"Error saving {full_object_key} to S3 bucket {save_bucket_name}: {e}")
             
+    if init_num_lines == final_num_lines:
+        logger.info(f"Number of lines is consistant, async seemed to work properly")
+        logger.info(f"Init # lines: {init_num_lines}, final # lines: {final_num_lines}")
+    else:
+        logger.warning(f"Number of lines is inconsistant, async may have been improperly implemented")
+        logger.warning(f"Init # lines: {init_num_lines}, final # lines: {final_num_lines}")
 
-    
     ##### old from pipeline
     # # Get our object
     # response = s3.get_object(Bucket=bucket, Key=key)
