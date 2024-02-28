@@ -17,6 +17,8 @@ from dataclasses import (
     field,
 )  # for storing API inputs, outputs, and metadata
 
+import tempfile # for saving locally before transformations
+
 
 load_dotenv()
 
@@ -431,24 +433,40 @@ def handler(event, context):
     logger.info(f"Source bucket: {bucket}")
     logger.info(f"File: {key}") # This would be something like data/indeed_19_02_2024.json
     
+    
+    # Below was saving locally to change, instead can use s3.get_object
+    stripped_key = key.split("/")[-1]
     try:
-        local_filename = '/tmp/' + key # lambda saves to /tmp by default
+        local_filename = '/tmp/' + stripped_key # lambda saves to /tmp by default
         s3.download_file(bucket, key, local_filename)
         logger.info(f"{key} downloaded to {local_filename}")
-    except boto3.exceptions.ClientError as e:
+    except Exception as e:
         logger.error(f"Error downloading file locally to {local_filename}:")
         logger.error(e)
         raise
     
+    
+    ## To use s3.get_object instead, would need to change my process_api_requests_from_file()
+    # try:
+    #     response = s3.get_object(Bucket=bucket, Key=key)
+    #     json_lines = response['Body'].read().decode('utf-8').slitlines()
+    #     s3_data = [json.loads(line) for line in json_lines]
+    #     logger.info(f"{key} data saved to s3_data variable")
+    # except Exception as e:
+    #     logger.error(f"Error saving {key} to variable: {e}")
+    #     raise
+    
+    
+    
     init_num_lines = count_jsonl_lines(local_filename)
     
-    local_filename_saved = f"/tmp/{key}_saved.jsonl"
+    local_filename_saved = f"/tmp/{stripped_key.split('.')[0]}_saved.jsonl"
     
     asyncio.run(
         process_api_requests_from_file(
             requests_filepath=local_filename,
             save_filepath=local_filename_saved,
-            requests_url="https://api.openai.com/v1/chat/completions",
+            request_url="https://api.openai.com/v1/chat/completions",
             api_key=str(os.getenv("OPENAI_API_KEY")),
             max_requests_per_minute=float(500),
             max_tokens_per_minute=float(59999),
@@ -471,7 +489,7 @@ def handler(event, context):
     # save to s3
     save_bucket_name = os.environ.get("SAVE_BUCKET_NAME")
     save_bucket_folder = os.environ.get("SAVE_FOLDER_NAME")
-    full_object_key = f"{save_bucket_folder}/{key}"
+    full_object_key = f"{key}"  ## don't need {save_bucket_folder} as data/ in key. 
     try:
         with open(local_filename_saved, 'rb') as f:
             jsonl_data = f.read()
@@ -492,23 +510,3 @@ def handler(event, context):
         logger.warning(f"Number of lines is inconsistant, async may have been improperly implemented")
         logger.warning(f"Init # lines: {init_num_lines}, final # lines: {final_num_lines}")
 
-    ##### old from pipeline
-    # # Get our object
-    # response = s3.get_object(Bucket=bucket, Key=key)
-    # json_lines = response['Body'].read().decode('utf-8').splitlines()
-    # s3_data = [json.loads(line) for line in json_lines]
-    
-    # pipeline = GptPipeline(filename=key, data=s3_data)
-    
-    # print(f"Running fetch_gpt_funct with async")
-    # loop.run_until_complete(fetch_gpt_funct(pipeline))
-    # print(f"Running clean_gpt_response()")
-    # pipeline.clean_gpt_response()
-    # print(f"Running clean_tech_lists()")
-    # pipeline.clean_tech_lists()
-    
-    # # Remove prefixes from original key before uploading to s3
-    # stripped_key = key.split("/")
-    
-    # # Save result to new s3 bucket
-    # upload_to_s3(pipeline.data, stripped_key[-1])
