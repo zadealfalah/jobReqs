@@ -312,20 +312,25 @@ class APIRequest:
                 logging.error(
                     f"Request {self.request_json} failed after all attempts. Saving errors: {self.result}"
                 )
-                data = (
-                    [self.request_json, [str(e) for e in self.result], self.metadata]
-                    if self.metadata
-                    else [self.request_json, [str(e) for e in self.result]]
-                )
+                # data = (
+                #     [self.request_json, [str(e) for e in self.result], self.metadata]
+                #     if self.metadata
+                #     else [self.request_json, [str(e) for e in self.result]]
+                # )
+                data = self.request_json.copy()
+                data.update({"result":[str(e) for e in self.result]})
+                
                 append_to_jsonl(data, save_filepath)
                 status_tracker.num_tasks_in_progress -= 1
                 status_tracker.num_tasks_failed += 1
         else:
-            data = (
-                [self.request_json, response, self.metadata]
-                if self.metadata
-                else [self.request_json, response]
-            )
+            # data = (
+            #     [self.request_json, response, self.metadata]
+            #     if self.metadata
+            #     else [self.request_json, response]
+            # )
+            data = self.request_json.copy()
+            data.update(response)
             append_to_jsonl(data, save_filepath)
             status_tracker.num_tasks_in_progress -= 1
             status_tracker.num_tasks_succeeded += 1
@@ -339,7 +344,6 @@ def api_endpoint_from_url(request_url):
     """Extract the API endpoint from the request URL."""
     match = re.search("^https://[^/]+/v\\d+/(.+)$", request_url)
     if match is None:
-        # for Azure OpenAI deployment urls
         match = re.search(
             r"^https://[^/]+/openai/deployments/[^/]+/(.+?)(\?|$)", request_url
         )
@@ -351,6 +355,7 @@ def append_to_jsonl(data, filename: str) -> None:
     json_string = json.dumps(data)
     with open(filename, "a") as f:
         f.write(json_string + "\n")
+    
 
 
 def num_tokens_consumed_from_request(
