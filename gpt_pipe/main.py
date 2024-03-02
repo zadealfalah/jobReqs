@@ -329,6 +329,12 @@ class APIRequest:
             #     if self.metadata
             #     else [self.request_json, response]
             # )
+            
+            ## Update gpt tech list response
+            # print(response)
+            cleaned_techs = clean_gpt_list(response)
+            response['choices'][0]['message']['content'] = cleaned_techs
+            
             data = self.request_json.copy()
             data.update(response)
             append_to_jsonl(data, save_filepath)
@@ -338,6 +344,22 @@ class APIRequest:
 
 
 # functions
+
+def clean_gpt_list(response):
+    possible_list = response['choices'][0]['message']['content']
+    if possible_list.startswith('['): # It is a list
+        try:
+            stripped_list = possible_list.strip('[]')
+            cleaned_list = [item.strip() for item in stripped_list.split(',')]
+        except Exception as e:
+            logging.warning(f"Error with response: {response}")
+            logging.warning(f"Error separating {possible_list}. Returning empty list.")
+            cleaned_list = []
+    else: # Improperly formatted
+        logging.warning(f"Error with response: {response}")
+        logging.warning(f"Message {possible_list} improperly formatted. Returning empty list.")
+        cleaned_list = []
+    return cleaned_list
 
 
 def api_endpoint_from_url(request_url):
