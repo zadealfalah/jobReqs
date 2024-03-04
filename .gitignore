@@ -167,14 +167,12 @@ init_flask_app.py
 # Scrapeops api key hiding for now
 # settings.py
 
-# All ipynbs
-*.ipynb
-indscraper/indscraper/settings.py
-indscraper/indscraper/settings.py
-indscraper/indscraper/settings.py
+
+testing.ipynb
 indscraper/indscraper/settings.py
 .env_old
 
 *.pem
 *.ppk
 *.json
+

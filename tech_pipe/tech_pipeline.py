@@ -130,5 +130,6 @@ class TechIdentificationPipeline:
             modified_data.append(job) # Store the whole job in the modified data list
         
         ## Replace self.data with jobs from modified_data which have techs in them after cutting
+        self.logger.info(f"Jd splitting complete")
         self.data = [job for job in modified_data if len(job.get('split_jd', '')) > 1]
     
