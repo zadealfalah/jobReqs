@@ -175,4 +175,6 @@ indscraper/indscraper/settings.py
 *.pem
 *.ppk
 *.json
-
+*.exe
+terraform_code/terraform.tfstate.backup
+terraform_code/.terraform.lock.hcl
