@@ -26,7 +26,8 @@ The tech_pipe portion of this project is an AWS Lambda function with another ECR
 The gpt_pipe picks up where the tech_pipe left off by again utilizing an ECR-hosted docker image with a Lambda trigger based on PUT commands, now to the 'tech-bucket-indeed' S3 bucket.  Here the shortened job descriptions are passed to the OpenAI API to find the relevant technologies listed within.  These API calls are done asynchronously and use chat completions with engineered prompts to properly direct the LLM in formatting our results.  Despite this, the results can sometimes be poor so some further cleaning is required.  We are also in the process of creating our own classifier via Hugging Face as it is believed we can create a more accurate, and obviously much cheaper tech classifier with some work.
 
 ## To Do
-- Create ETL job with Glue 
+- Change glue job to add full data to db, replace view for api usage
+- Complete then add pytests folder from local testing
 - Add terraform for remaining AWS resources
 - Add documentation for others to run end-to-end
 - Create website to showcase results

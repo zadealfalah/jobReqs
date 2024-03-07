@@ -178,3 +178,4 @@ indscraper/indscraper/settings.py
 *.exe
 terraform_code/terraform.tfstate.backup
 terraform_code/.terraform.lock.hcl
+tech_pyspark.ipynb
