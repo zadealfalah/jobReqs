@@ -1,21 +1,15 @@
 -- Create jobs table
 CREATE TABLE jobs (
     job_key VARCHAR(255) PRIMARY KEY,
-    location VARCHAR(255),
+    job_location VARCHAR(255),
     salary_min DECIMAL(10, 2),
     salary_max DECIMAL(10, 2),
     salary_type VARCHAR(50),
     salary_estimated_flag INT,
     company VARCHAR(255),
     job_title VARCHAR(255),
+    job_date
     url VARCHAR(1000),
-);
-
--- Create job_descriptions table
-CREATE TABLE job_descriptions (
-    job_key VARCHAR(255) PRIMARY KEY,
-    job_description TEXT,
-    split_jd TEXT
 );
 
 -- Create keywords table
