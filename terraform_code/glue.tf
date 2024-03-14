@@ -29,7 +29,7 @@ resource "aws_glue_job" "etl_job" {
 
   command {
     name="glueetl" #optional, type of job we want to use e.g. gluestreaming, glueetl
-    script_location = "s3://${var.s3_bucket}/glue/scripts/sql_job_script.py" #required, glue script location
+    script_location = "s3://${var.s3_bucket}sql_job_script.py" #required, glue script location
   }
 
   connections = [ aws_glue_connection.rds_connection.name ]
