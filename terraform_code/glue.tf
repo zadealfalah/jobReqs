@@ -2,11 +2,9 @@
 resource "aws_glue_connection" "rds_connection" {
   name                 = "rds-connection"
   connection_properties = {
-    HOST      = aws_db_instance.scrape-db.endpoint
     USERNAME  = var.db_username
     PASSWORD  = var.db_password
-    JDBC_DRIVER_CLASS_NAME = "com.mysql.jdbc.Driver"
-    JDBC_CONNECTION_URL = "jdbc:mysql://${aws_db_instance.scrape-db.endpoint}/${aws_db_instance.scrape-db.db_name}"
+    JDBC_CONNECTION_URL = "jdbc:mysql://${aws_db_instance.scrape-db.endpoint}:${aws_db_instance.scrape-db.port}/${aws_db_instance.scrape-db.db_name}"
   }
 }
 
@@ -14,7 +12,7 @@ resource "aws_glue_connection" "rds_connection" {
 # etag does a checksum comparing local to s3, redeploying if diffs exist
 resource "aws_s3_object" "sql_job_script" {
   bucket = var.s3_bucket
-  key = "glue/scripts/sql_job_script.py"
+  key = "sql_job_script.py"
   source = "${local.glue_src_path}sql_job_script.py"
   etag = filemd5("${local.glue_src_path}sql_job_script.py")
 }
