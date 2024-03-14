@@ -27,3 +27,18 @@ variable "aws_iam_user" {
     type        = string
     sensitive   = true
 }
+
+# To be updated
+locals {
+  glue_src_path = "${path.root}/glue/"
+}
+
+variable "s3_bucket" {
+  type=string
+  default = "glue-bucket-indeed"
+}
+
+# # Below if I want to add tags
+# variable "project" {
+#   type=string
+# }
