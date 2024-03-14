@@ -91,13 +91,32 @@ jobs_table = df.select("job_key", "job_location", "from_age", "page", "position"
                        "job_description", "company", "job_title", "url", "split_jd", "job_date",
                     )
 
+# e.g. jdbc url-  jdbc:mysql://endpoint:port/database.
+# The following is an example JDBC URL: jdbc:redshift://examplecluster.abc123xyz789.us-west-2.redshift.amazonaws.com:5439/dev 
 
-# Write the tables to rds (mysql)
+temp_db_endpoint_str = ""
+temp_db_port_str = ""
+temp_db_name_str = "scrapeindeed"
+
 for table_name, data_frame in [("keywords", keywords_table), ("techs", techs_table), ("jobs", jobs_table)]:
     dynamic_frame = DynamicFrame.fromDF(data_frame, glueContext, f"{table_name}_dyf")
-    glueContext.write_dynamic_frame.from_jdbc_conf(
-        frame=dynamic_frame,
-        catalog_connection="rds-connection",  # Specify the Glue connection name
-        connection_options={"dbtable": table_name, "database": "scrapeindeed"},
-        redshift_tmp_dir="s3://gpt-bucket-indeed/temp/"  # Temporary directory is not needed for RDS
-    )
+
+    datasink = glueContext.write_dynamic_frame_from_options(frame=dynamic_frame, connection_type="mysql", 
+                                                            connection_options={
+                                                                "url" : f"jdbc:mysql://{temp_db_endpoint_str}:{temp_db_port_str}/{temp_db_name_str}",
+                                                                "user" : "",
+                                                                "password" : "",
+                                                                "dbtable" : table_name,
+                                                                "redshiftTmpDir" : "s3://gpt-bucket-indeed/temp/"
+                                                            }
+                                                            )
+
+# # Write the tables to rds (mysql)
+# for table_name, data_frame in [("keywords", keywords_table), ("techs", techs_table), ("jobs", jobs_table)]:
+#     dynamic_frame = DynamicFrame.fromDF(data_frame, glueContext, f"{table_name}_dyf")
+#     glueContext.write_dynamic_frame.from_jdbc_conf(
+#         frame=dynamic_frame,
+#         catalog_connection="rds-connection",  # Specify the Glue connection name
+#         connection_options={"dbtable": table_name, "database": "scrapeindeed"},
+#         redshift_tmp_dir="s3://gpt-bucket-indeed/temp/"  # Temporary directory is not needed for RDS
+#     )

@@ -17,10 +17,19 @@ resource "aws_s3_object" "sql_job_script" {
   etag = filemd5("${local.glue_src_path}sql_job_script.py")
 }
 
+
+# Add cloudwatch log group for glue job
+resource "aws_cloudwatch_log_group" "etl_cloudwatch_log_group" {
+    name = "etl_cloudwatch_log_group"
+    retention_in_days = 14
+}
+
+
+
 resource "aws_glue_job" "etl_job" {
   glue_version = "4.0" #optional
   max_retries = 0 #optional
-  name = "glueetl" #required
+  name = "sql_job_script" #required
   description = "test the deployment of an aws glue job to aws glue service with terraform" #description
   role_arn = aws_iam_role.glue_service_role.arn #required
   number_of_workers = 2 #optional, defaults to 5 if not set
@@ -35,12 +44,16 @@ resource "aws_glue_job" "etl_job" {
   connections = [ aws_glue_connection.rds_connection.name ]
 
   default_arguments = {
-    "--class"                   = "GlueApp"
-    "--enable-job-insights"     = "true"
-    "--enable-auto-scaling"     = "false"
-    "--enable-glue-datacatalog" = "true"
-    "--job-language"            = "python"
-    "--job-bookmark-option"     = "job-bookmark-disable"
+    "--continuous-log-logGroup"          = aws_cloudwatch_log_group.etl_cloudwatch_log_group.name
+    "--enable-continuous-cloudwatch-log" = "true"
+    "--enable-continuous-log-filter"     = "true"
+    "--enable-metrics"                   = ""
+    "--class"                            = "GlueApp"
+    "--enable-job-insights"              = "true"
+    "--enable-auto-scaling"              = "false"
+    "--enable-glue-datacatalog"          = "true"
+    "--job-language"                     = "python"
+    "--job-bookmark-option"              = "job-bookmark-disable"
   }
 }
 
