@@ -5,13 +5,25 @@ from awsglue.job import Job
 from awsglue.dynamicframe import DynamicFrame
 from pyspark.sql.functions import input_file_name, to_date, regexp_extract, explode
 import logging
+import boto3
+import json
 
-
+print("Imported")
 sc = SparkContext.getOrCreate()
 glueContext = GlueContext(sc)
 logger = glueContext.get_logger()
 spark = glueContext.spark_session
 job = Job(glueContext)
+
+secrets_manager_client = boto3.client('secretsmanager', region_name='us-east-1')
+secret_name = "database-credentials-secret"
+response = secrets_manager_client.get_secret_value(SecretId=secret_name)
+secret_data = response['SecretString']
+credentials = json.loads(secret_data)
+
+# Extract username and password from the retrieved credentials
+db_username = credentials['db_username']
+db_password = credentials['db_password']
 
 
 logging.info("Creating spark dataframe from glue catalog")
@@ -19,7 +31,6 @@ df = glueContext.create_data_frame_from_catalog(database="gpt-bucket-database",
                                                 table_name="data",
                                                 transformation_ctx="input_df"
                                                 )
-
 
 
 
@@ -94,8 +105,8 @@ jobs_table = df.select("job_key", "job_location", "from_age", "page", "position"
 # e.g. jdbc url-  jdbc:mysql://endpoint:port/database.
 # The following is an example JDBC URL: jdbc:redshift://examplecluster.abc123xyz789.us-west-2.redshift.amazonaws.com:5439/dev 
 
-temp_db_endpoint_str = ""
-temp_db_port_str = ""
+temp_db_endpoint_str = "terraform-20240319163602993000000001.cvga0mcyqwny.us-east-1.rds.amazonaws.com"
+temp_db_port_str = "3306"
 temp_db_name_str = "scrapeindeed"
 
 for table_name, data_frame in [("keywords", keywords_table), ("techs", techs_table), ("jobs", jobs_table)]:
@@ -104,12 +115,14 @@ for table_name, data_frame in [("keywords", keywords_table), ("techs", techs_tab
     datasink = glueContext.write_dynamic_frame_from_options(frame=dynamic_frame, connection_type="mysql", 
                                                             connection_options={
                                                                 "url" : f"jdbc:mysql://{temp_db_endpoint_str}:{temp_db_port_str}/{temp_db_name_str}",
-                                                                "user" : "",
-                                                                "password" : "",
+                                                                "user" : db_username,
+                                                                "password" : db_password,
                                                                 "dbtable" : table_name,
                                                                 "redshiftTmpDir" : "s3://gpt-bucket-indeed/temp/"
                                                             }
                                                             )
+
+
 
 # # Write the tables to rds (mysql)
 # for table_name, data_frame in [("keywords", keywords_table), ("techs", techs_table), ("jobs", jobs_table)]:

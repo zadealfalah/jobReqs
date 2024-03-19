@@ -6,7 +6,13 @@ resource "aws_glue_connection" "rds_connection" {
     PASSWORD  = var.db_password
     JDBC_CONNECTION_URL = "jdbc:mysql://${aws_db_instance.scrape-db.endpoint}:${aws_db_instance.scrape-db.port}/${aws_db_instance.scrape-db.db_name}"
   }
+
+#   physical_connection_requirements {
+#     availability_zone = aws_subnet.scraper-public-subnet-us-east-1a.availability_zone
+#     security_group_id_list = [aws_security_group.e]
+#   }
 }
+
 
 # Uploads the etl script to s3
 # etag does a checksum comparing local to s3, redeploying if diffs exist
@@ -31,7 +37,7 @@ resource "aws_glue_job" "etl_job" {
   max_retries = 0 #optional
   name = "sql_job_script" #required
   description = "test the deployment of an aws glue job to aws glue service with terraform" #description
-  role_arn = aws_iam_role.glue_service_role.arn #required
+  role_arn = aws_iam_role.glue_role.arn #required
   number_of_workers = 2 #optional, defaults to 5 if not set
   worker_type = "G.1X" #optional
   timeout = "15" #optional, in number of minutes
@@ -47,7 +53,7 @@ resource "aws_glue_job" "etl_job" {
     "--continuous-log-logGroup"          = aws_cloudwatch_log_group.etl_cloudwatch_log_group.name
     "--enable-continuous-cloudwatch-log" = "true"
     "--enable-continuous-log-filter"     = "true"
-    "--enable-metrics"                   = ""
+    "--enable-metrics"                   = "true"
     "--class"                            = "GlueApp"
     "--enable-job-insights"              = "true"
     "--enable-auto-scaling"              = "false"
@@ -67,4 +73,5 @@ resource "aws_db_instance" "scrape-db" {
     password             = var.db_password
     parameter_group_name = "default.mysql8.0"
     skip_final_snapshot  = true
+    # db_subnet_group_name = aws_db_subnet_group.scrape-db-subnet-group.name
 }

@@ -8,8 +8,8 @@ CREATE TABLE jobs (
     salary_estimated_flag INT,
     company VARCHAR(255),
     job_title VARCHAR(255),
-    job_date
-    url VARCHAR(1000),
+    job_date DATE
+    job_url VARCHAR(1000),
 );
 
 -- Create keywords table

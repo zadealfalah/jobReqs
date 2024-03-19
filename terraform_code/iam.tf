@@ -1,73 +1,106 @@
-data "aws_iam_policy_document" "glue_execution_assume_role_policy" {
-  statement {
-    effect  = "Allow"
-    actions = ["sts:AssumeRole"]
+# Set up database security groups
 
-    principals {
-      type        = "Service"
-      identifiers = ["glue.amazonaws.com"]
-    }
-  }
+# Security group to allow glue access to mysql
+resource "aws_security_group" "glue_security_group" {
+  vpc_id = aws_vpc.glue_vpc.id
 }
 
-# IAM policy for S3 access
-data "aws_iam_policy_document" "s3_access_policy" {
-  statement {
-    effect    = "Allow"
-    actions   = ["s3:GetObject", "s3:PutObject", "s3:DeleteObject"]
-    resources = ["arn:aws:s3:::${var.s3_bucket}/*"]
-  }
+resource "aws_vpc_security_group_ingress_rule" "allow_tls_ipv4" {
+  security_group_id = aws_security_group.glue_security_group.id
+  from_port = 3306
+  to_port = 3306
+  ip_protocol = "tcp"
+  referenced_security_group_id = aws_security_group.glue_security_group.id
+
 }
 
-# IAM policy for RDS access
-data "aws_iam_policy_document" "rds_access_policy" {
-  statement {
-    effect    = "Allow"
-    actions   = ["rds-data:ExecuteStatement"]
-    resources = ["arn:aws:rds:*:*:scrapeindeed/*"]  
-  }
+resource "aws_vpc_security_group_egress_rule" "allow_ipv4_traffic" {
+  security_group_id = aws_security_group.glue_security_group.id
+  ip_protocol = "-1" # all ports
+  referenced_security_group_id = aws_security_group.glue_security_group.id
+
 }
 
-resource "aws_iam_policy" "glue_access_policy" {
-  name   = "glue-access-policy"
+resource "aws_vpc_security_group_ingress_rule" "glue_self_rule" {
+  security_group_id = aws_security_group.glue_security_group.id
+  ip_protocol = "-1"
+  from_port = 0
+  to_port = 65535
+  referenced_security_group_id = aws_security_group.glue_security_group.id
+}
+
+
+
+
+
+
+# IAM Role for Glue Script
+resource "aws_iam_role" "glue_role" {
+  name               = "glue_role"
+  assume_role_policy = jsonencode({
+    Version   = "2012-10-17",
+    Statement = [
+      {
+        Action    = "sts:AssumeRole",
+        Effect    = "Allow",
+        Principal = {
+          Service = "glue.amazonaws.com"
+        }
+      }
+    ]
+  })
+}
+
+# IAM Policy for Glue Role to access S3
+resource "aws_iam_policy" "glue_s3_policy" {
+  name        = "glue_s3_policy"
+  description = "IAM policy for Glue to access S3"
+
   policy = jsonencode({
     Version   = "2012-10-17",
     Statement = [
       {
         Effect   = "Allow",
-        Action   = ["glue:*"],
-        Resource = "*",
-      },
-    ],
+        Action   = [
+          "s3:GetObject",
+          "s3:ListBucket",
+          "s3:PutObject"
+        ],
+        Resource = "arn:aws:s3:::your_bucket/*" # Replace `your_bucket` with your actual S3 bucket name
+      }
+    ]
   })
 }
 
-resource "aws_iam_role" "glue_service_role" {
-  name               = "aws_glue_job_runner"
-  assume_role_policy = data.aws_iam_policy_document.glue_execution_assume_role_policy.json
+# Attach S3 policy to Glue role
+resource "aws_iam_policy_attachment" "glue_s3_attachment" {
+  name       = "glue_s3_attachment"
+  roles      = [aws_iam_role.glue_role.name]
+  policy_arn = aws_iam_policy.glue_s3_policy.arn
 }
 
-resource "aws_iam_policy" "s3_access_policy" {
-  name   = "s3-access-policy"
-  policy = data.aws_iam_policy_document.s3_access_policy.json
+# IAM Policy for Glue Role to access RDS
+resource "aws_iam_policy" "glue_rds_policy" {
+  name        = "glue_rds_policy"
+  description = "IAM policy for Glue to access RDS"
+
+  policy = jsonencode({
+    Version   = "2012-10-17",
+    Statement = [
+      {
+        Effect   = "Allow",
+        Action   = [
+          "rds-db:connect"
+        ],
+        Resource = "*"
+      }
+    ]
+  })
 }
 
-resource "aws_iam_policy" "rds_access_policy" {
-  name   = "rds-access-policy"
-  policy = data.aws_iam_policy_document.rds_access_policy.json
-}
-
-resource "aws_iam_role_policy_attachment" "glue_access_permissions" {
-  role       = aws_iam_role.glue_service_role.name
-  policy_arn = aws_iam_policy.glue_access_policy.arn
-}
-
-resource "aws_iam_role_policy_attachment" "s3_access_permissions" {
-  role       = aws_iam_role.glue_service_role.name
-  policy_arn = aws_iam_policy.s3_access_policy.arn
-}
-
-resource "aws_iam_role_policy_attachment" "rds_access_permissions" {
-  role       = aws_iam_role.glue_service_role.name
-  policy_arn = aws_iam_policy.rds_access_policy.arn
+# Attach RDS policy to Glue role
+resource "aws_iam_policy_attachment" "glue_rds_attachment" {
+  name       = "glue_rds_attachment"
+  roles      = [aws_iam_role.glue_role.name]
+  policy_arn = aws_iam_policy.glue_rds_policy.arn
 }
