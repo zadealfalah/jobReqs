@@ -2,6 +2,7 @@ import sys
 from pyspark.context import SparkContext
 from awsglue.context import GlueContext
 from awsglue.job import Job
+from awsglue.utils import getResolvedOptions
 from awsglue.dynamicframe import DynamicFrame
 from pyspark.sql.functions import input_file_name, to_date, regexp_extract, explode
 import logging
@@ -9,21 +10,14 @@ import boto3
 import json
 
 print("Imported")
+args = getResolvedOptions(sys.argv, ["JOB_NAME"])
 sc = SparkContext.getOrCreate()
 glueContext = GlueContext(sc)
 logger = glueContext.get_logger()
 spark = glueContext.spark_session
 job = Job(glueContext)
+job.init(args["JOB_NAME"], args)
 
-secrets_manager_client = boto3.client('secretsmanager', region_name='us-east-1')
-secret_name = "database-credentials-secret"
-response = secrets_manager_client.get_secret_value(SecretId=secret_name)
-secret_data = response['SecretString']
-credentials = json.loads(secret_data)
-
-# Extract username and password from the retrieved credentials
-db_username = credentials['db_username']
-db_password = credentials['db_password']
 
 
 logging.info("Creating spark dataframe from glue catalog")
@@ -31,46 +25,6 @@ df = glueContext.create_data_frame_from_catalog(database="gpt-bucket-database",
                                                 table_name="data",
                                                 transformation_ctx="input_df"
                                                 )
-
-
-
-# DDL statements to create tables in RDS
-ddl_statements = [
-    """
-    CREATE TABLE IF NOT EXISTS jobs (
-        job_key VARCHAR(255) PRIMARY KEY,
-        job_location VARCHAR(255),
-        salary_min DECIMAL(10, 2),
-        salary_max DECIMAL(10, 2),
-        salary_type VARCHAR(50),
-        salary_estimated_flag INT,
-        company VARCHAR(255),
-        job_title VARCHAR(255),
-        job_date DATE,
-        url VARCHAR(1000)
-    )
-    """,
-    """
-    CREATE TABLE IF NOT EXISTS keywords (
-        id INT AUTO_INCREMENT PRIMARY KEY,
-        job_key VARCHAR(255),
-        keyword VARCHAR(255),
-        FOREIGN KEY (job_key) REFERENCES jobs(job_key)
-    )
-    """,
-    """
-    CREATE TABLE IF NOT EXISTS tech (
-        id INT AUTO_INCREMENT PRIMARY KEY,
-        job_key VARCHAR(255),
-        technology VARCHAR(255),
-        FOREIGN KEY (job_key) REFERENCES jobs(job_key)
-    )
-    """
-]
-
-# Execute DDL statements
-for ddl_statement in ddl_statements:
-    spark.sql(ddl_statement)
 
 
 
@@ -102,34 +56,10 @@ jobs_table = df.select("job_key", "job_location", "from_age", "page", "position"
                        "job_description", "company", "job_title", "url", "split_jd", "job_date",
                     )
 
-# e.g. jdbc url-  jdbc:mysql://endpoint:port/database.
-# The following is an example JDBC URL: jdbc:redshift://examplecluster.abc123xyz789.us-west-2.redshift.amazonaws.com:5439/dev 
-
-temp_db_endpoint_str = "terraform-20240319163602993000000001.cvga0mcyqwny.us-east-1.rds.amazonaws.com"
-temp_db_port_str = "3306"
-temp_db_name_str = "scrapeindeed"
-
-for table_name, data_frame in [("keywords", keywords_table), ("techs", techs_table), ("jobs", jobs_table)]:
-    dynamic_frame = DynamicFrame.fromDF(data_frame, glueContext, f"{table_name}_dyf")
-
-    datasink = glueContext.write_dynamic_frame_from_options(frame=dynamic_frame, connection_type="mysql", 
-                                                            connection_options={
-                                                                "url" : f"jdbc:mysql://{temp_db_endpoint_str}:{temp_db_port_str}/{temp_db_name_str}",
-                                                                "user" : db_username,
-                                                                "password" : db_password,
-                                                                "dbtable" : table_name,
-                                                                "redshiftTmpDir" : "s3://gpt-bucket-indeed/temp/"
-                                                            }
-                                                            )
+keywords_table.write.parquet("s3://glue-bucket-indeed/processed/keywords/testkw")
+techs_table.write.parquet("s3://glue-bucket-indeed/processed/techs/testtech")
+jobs_table.write.parquet("s3://glue-bucket-indeed/processed/jobs/testjob")
 
 
+job.commit()
 
-# # Write the tables to rds (mysql)
-# for table_name, data_frame in [("keywords", keywords_table), ("techs", techs_table), ("jobs", jobs_table)]:
-#     dynamic_frame = DynamicFrame.fromDF(data_frame, glueContext, f"{table_name}_dyf")
-#     glueContext.write_dynamic_frame.from_jdbc_conf(
-#         frame=dynamic_frame,
-#         catalog_connection="rds-connection",  # Specify the Glue connection name
-#         connection_options={"dbtable": table_name, "database": "scrapeindeed"},
-#         redshift_tmp_dir="s3://gpt-bucket-indeed/temp/"  # Temporary directory is not needed for RDS
-#     )

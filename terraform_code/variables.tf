@@ -38,6 +38,11 @@ variable "s3_bucket" {
   default = "glue-bucket-indeed"
 }
 
+variable "s3_gpt_data_bucket" {
+    type=string
+    default = "gpt-bucket-indeed/data"
+}
+
 # # Below if I want to add tags
 # variable "project" {
 #   type=string

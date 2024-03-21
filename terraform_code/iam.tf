@@ -1,42 +1,6 @@
-# Set up database security groups
-
-# Security group to allow glue access to mysql
-resource "aws_security_group" "glue_security_group" {
-  vpc_id = aws_vpc.glue_vpc.id
-}
-
-resource "aws_vpc_security_group_ingress_rule" "allow_tls_ipv4" {
-  security_group_id = aws_security_group.glue_security_group.id
-  from_port = 3306
-  to_port = 3306
-  ip_protocol = "tcp"
-  referenced_security_group_id = aws_security_group.glue_security_group.id
-
-}
-
-resource "aws_vpc_security_group_egress_rule" "allow_ipv4_traffic" {
-  security_group_id = aws_security_group.glue_security_group.id
-  ip_protocol = "-1" # all ports
-  referenced_security_group_id = aws_security_group.glue_security_group.id
-
-}
-
-resource "aws_vpc_security_group_ingress_rule" "glue_self_rule" {
-  security_group_id = aws_security_group.glue_security_group.id
-  ip_protocol = "-1"
-  from_port = 0
-  to_port = 65535
-  referenced_security_group_id = aws_security_group.glue_security_group.id
-}
-
-
-
-
-
-
-# IAM Role for Glue Script
-resource "aws_iam_role" "glue_role" {
-  name               = "glue_role"
+# IAM Role for Glue crawler Script
+resource "aws_iam_role" "glue_crawler_role" {
+  name               = "glue_crawler_role"
   assume_role_policy = jsonencode({
     Version   = "2012-10-17",
     Statement = [
@@ -51,56 +15,41 @@ resource "aws_iam_role" "glue_role" {
   })
 }
 
-# IAM Policy for Glue Role to access S3
-resource "aws_iam_policy" "glue_s3_policy" {
-  name        = "glue_s3_policy"
-  description = "IAM policy for Glue to access S3"
-
-  policy = jsonencode({
-    Version   = "2012-10-17",
-    Statement = [
-      {
-        Effect   = "Allow",
-        Action   = [
-          "s3:GetObject",
-          "s3:ListBucket",
-          "s3:PutObject"
-        ],
-        Resource = "arn:aws:s3:::your_bucket/*" # Replace `your_bucket` with your actual S3 bucket name
-      }
-    ]
-  })
-}
-
-# Attach S3 policy to Glue role
+# Attach complete s3 access policy to glue role
 resource "aws_iam_policy_attachment" "glue_s3_attachment" {
   name       = "glue_s3_attachment"
-  roles      = [aws_iam_role.glue_role.name]
-  policy_arn = aws_iam_policy.glue_s3_policy.arn
+  roles      = [aws_iam_role.glue_crawler_role.name]
+  policy_arn = "arn:aws:iam::aws:policy/AmazonS3FullAccess"
 }
 
-# IAM Policy for Glue Role to access RDS
-resource "aws_iam_policy" "glue_rds_policy" {
-  name        = "glue_rds_policy"
-  description = "IAM policy for Glue to access RDS"
+# Create cloudwatch logs policy
+resource "aws_iam_policy" "cloudwatch_logs_policy" {
+  name        = "glue_crawler_cloudwatch_logs_policy"
+  description = "Policy for Glue crawler to write logs to CloudWatch Logs"
 
   policy = jsonencode({
-    Version   = "2012-10-17",
-    Statement = [
+    "Version": "2012-10-17",
+    "Statement": [
       {
-        Effect   = "Allow",
-        Action   = [
-          "rds-db:connect"
+        "Effect": "Allow",
+        "Action": [
+          "logs:CreateLogGroup",
+          "logs:CreateLogStream",
+          "logs:PutLogEvents"
         ],
-        Resource = "*"
+        "Resource": "*"
       }
     ]
   })
 }
+# Attach cloudwatch logs policy
+resource "aws_iam_role_policy_attachment" "glue_crawler_cloudwatch_logs_access" {
+  role       = aws_iam_role.glue_crawler_role.name
+  policy_arn = aws_iam_policy.cloudwatch_logs_policy.arn
+}
 
-# Attach RDS policy to Glue role
-resource "aws_iam_policy_attachment" "glue_rds_attachment" {
-  name       = "glue_rds_attachment"
-  roles      = [aws_iam_role.glue_role.name]
-  policy_arn = aws_iam_policy.glue_rds_policy.arn
+# Attach glue service role policy
+resource "aws_iam_role_policy_attachment" "glue_crawler_policy_attachment" {
+  role       = aws_iam_role.glue_crawler_role.name
+  policy_arn = "arn:aws:iam::aws:policy/service-role/AWSGlueServiceRole"
 }
