@@ -43,7 +43,22 @@ variable "s3_gpt_data_bucket" {
     default = "gpt-bucket-indeed/data"
 }
 
+variable "aws_account_id" {
+  type=string
+  sensitive = true
+}
+
 # # Below if I want to add tags
 # variable "project" {
 #   type=string
 # }
+
+variable "athena_user_aws_access_key" {
+    type=string
+    sensitive = true
+}
+
+variable "athena_user_aws_secret_key" {
+    type=string
+    sensitive = true
+}
