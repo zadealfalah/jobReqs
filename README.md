@@ -8,7 +8,7 @@
 * [To Do](#to-do)
 
 ## General Info
-This project involves scraping jobs from Indeed via scrapy spiders to find trends in various data field job opportunities.  The project is currently broken up in to three sections: The scraper within indscraper, the data cleaning within tech_pipe, and the OpenAI chatGPT portion within gpt_pipe.
+This project involves scraping jobs from Indeed via scrapy spiders to find trends in various data field job opportunities.  The project is currently broken up in to three sections: The scraper within indscraper, the data cleaning within tech_pipe, and the OpenAI chatGPT portion within gpt_pipe which identifies technologies from the job descriptions.
 
 ## indscraper
 This scraper was created via docker and is hosted on AWS ECR.  An AWS ECS cluster was created with a CRON scheduler to run the scraper at 00:01 UTC daily, currently scraping for remote positions with the keywords of 'data scientist', 'data analyst', and 'data engineer' on Indeed posted within the last 24 hours.
