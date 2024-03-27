@@ -105,7 +105,7 @@ logger.setLevel(logging.INFO)
 def lambda_handler(event, context):
     bucket = event['Records'][0]['s3']['bucket']['name']
     key = event['Records'][0]['s3']['object']['key']
-    # stripped_key = key.split("/")[-1]
+    stripped_key = key.split("/")[-1]
     save_bucket_name = os.environ.get("SAVE_BUCKET_NAME")
     
     # s3_bucket_name = 'gpt-bucket-indeed'
@@ -116,11 +116,23 @@ def lambda_handler(event, context):
     content = response['Body'].read().decode('utf-8')
     lines = content.splitlines()
     
+    # Get the date information from the filename
+    day = stripped_key.split('_')[1]
+    month = stripped_key.split('_')[2]
+    year = stripped_key.split('_')[3].split('.')[0]
+    
+    
     # Empty bucket to hold newly cleaned data
     modified_lines = []
     # Line-by-line clean the techs via removal and mapping
     for line in lines:
         data = json.loads(line)
+        
+        # Add the date information first
+        data['day'] = int(day)
+        data['month'] = int(month)
+        data['year'] = int(year)
+        
         if 'cleaned_techs' in data:
             # First try to remove the techs we don't want
             try:
@@ -134,7 +146,7 @@ def lambda_handler(event, context):
                 logger.warning(f"Error mapping techs for line {line}: {e}")
             # Put the cleaned tech list in
             modified_lines.append(json.dumps(data))
-        else:
+        else: # Don't keep the line if there's no techs left
             logger.info(f"No cleaned techs in line {line}")
     # Join all the now cleaned lines back together
     modified_content = '\n'.join(modified_lines)
