@@ -62,3 +62,8 @@ variable "athena_user_aws_secret_key" {
     type=string
     sensitive = true
 }
+
+variable "s3_clean_gpt_bucket" {
+    type=string
+    default = "clean-gpt-bucket-indeed/data"
+}
