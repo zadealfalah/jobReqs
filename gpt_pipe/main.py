@@ -333,10 +333,13 @@ class APIRequest:
             ## Update gpt tech list response
             # print(response)
             cleaned_techs = clean_gpt_list(response)
-            response['choices'][0]['message']['content'] = cleaned_techs
+            # response['choices'][0]['message']['content'] = cleaned_techs
+            
             
             data = self.request_json.copy()
-            data.update(response)
+            data.update(response)  # Add the gpt response to data
+            data.update({"cleaned_techs" : cleaned_techs}) # Add the cleaned tech list to the data
+            
             append_to_jsonl(data, save_filepath)
             status_tracker.num_tasks_in_progress -= 1
             status_tracker.num_tasks_succeeded += 1
