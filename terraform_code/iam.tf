@@ -79,8 +79,8 @@ resource "aws_iam_user_policy" "s3-athena-policy" {
                 "s3:List*"
             ],
             "Resource": [
-                "arn:aws:s3:::gpt-bucket-indeed/data/*",
-                "arn:aws:s3:::gpt-bucket-indeed"
+                "arn:aws:s3:::clean-gpt-bucket-indeed/data/*",
+                "arn:aws:s3:::clean-gpt-bucket-indeed"
             ]
         }
     ]
@@ -102,8 +102,8 @@ resource "aws_iam_user_policy" "glue-athena-policy" {
             ],
             "Resource": [
                 "arn:aws:glue:us-east-1:${var.aws_account_id}:catalog",
-                "arn:aws:glue:us-east-1:${var.aws_account_id}:table/gpt_results_bucket/*",
-                "arn:aws:glue:us-east-1:${var.aws_account_id}:database/gpt_results_bucket"
+                "arn:aws:glue:us-east-1:${var.aws_account_id}:table/clean_gpt_catalog/*",
+                "arn:aws:glue:us-east-1:${var.aws_account_id}:database/clean_gpt_catalog"
             ]
         }
     ]
