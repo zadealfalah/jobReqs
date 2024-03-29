@@ -8,7 +8,7 @@
 * [To Do](#to-do)
 
 ## General Info
-This project involves scraping jobs from Indeed via scrapy spiders to find trends in various data field job opportunities.  The project is currently broken up in to three sections: The scraper within indscraper, the data cleaning within tech_pipe, and the OpenAI chatGPT portion within gpt_pipe.
+This project involves scraping jobs from Indeed via scrapy spiders to find trends in various data field job opportunities.  The project is currently broken up in to three sections: The scraper within indscraper, the data cleaning within tech_pipe, and the OpenAI chatGPT portion within gpt_pipe which identifies technologies from the job descriptions.
 
 ## indscraper
 This scraper was created via docker and is hosted on AWS ECR.  An AWS ECS cluster was created with a CRON scheduler to run the scraper at 00:01 UTC daily, currently scraping for remote positions with the keywords of 'data scientist', 'data analyst', and 'data engineer' on Indeed posted within the last 24 hours.
@@ -26,12 +26,12 @@ The tech_pipe portion of this project is an AWS Lambda function with another ECR
 The gpt_pipe picks up where the tech_pipe left off by again utilizing an ECR-hosted docker image with a Lambda trigger based on PUT commands, now to the 'tech-bucket-indeed' S3 bucket.  Here the shortened job descriptions are passed to the OpenAI API to find the relevant technologies listed within.  These API calls are done asynchronously and use chat completions with engineered prompts to properly direct the LLM in formatting our results.  Despite this, the results can sometimes be poor so some further cleaning is required.  We are also in the process of creating our own classifier via Hugging Face as it is believed we can create a more accurate, and obviously much cheaper tech classifier with some work.
 
 ## To Do
-- Change glue job to add full data to db, replace view for api usage
+- Publish/share PowerBI dashboard(s)
 - Complete then add pytests folder from local testing
-- Add terraform for remaining AWS resources
+- Add terraform for remaining AWS resources (scraper, etc. on ec2)
 - Add documentation for others to run end-to-end
-- Create website to showcase results
-- Create architecture diagram
+- Create architecture diagram(s)
 - Create Hugging Face training data (classifier already working, input data subpar)
 - Update binary classifer - add more training data to tune further and create updated .pkl files
+- Create ML workflow for classifier/ner on AWS
 
