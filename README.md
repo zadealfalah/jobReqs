@@ -1,4 +1,4 @@
-# jobReqs - Python, AWS, Scrapy, openAI, docker
+# jobReqs - Python, AWS, Scrapy, openAI, docker, terraform
 
 ## Table of Contents
 * [General Info](#general-info)
