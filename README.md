@@ -6,10 +6,11 @@
 * [tech_pipe](#tech_pipe)
 * [gpt_pipe](#gpt_pipe)
 * [Last Steps](#last-steps)
+* [Example Results](#example-results)
 * [To Do](#to-do)
 
 ## General Info
-This project involves scraping jobs from Indeed via scrapy spiders to find trends in various data-based job opportunities.  The data is collected and cleaned daily via AWS and the results are visible via PowerBI.
+This project involves scraping jobs from Indeed via scrapy spiders to find trends in various data-based job opportunities.  The data is collected and cleaned daily via AWS and the results are visible via PowerBI.  A basic dashboard has already been created and some images from it can be seen in the [Example Results](#example-results) section.
 
 ## indscraper
 This scraper was created via docker and is hosted on AWS ECR.  An AWS ECS cluster was created with a CRON scheduler to run the scraper at 00:01 UTC daily, currently scraping for remote positions with the keywords of 'data scientist', 'data analyst', and 'data engineer' on Indeed posted within the last 24 hours.
@@ -31,8 +32,12 @@ After the gpt_pipe is complete we do a final cleaning where some basic removal a
 This portion of the project is necessary due to the OpenAI results and will hopefully be removable or at least reducable once a better classifier is implemented.
 Once the data is as clean as we can get it, AWS Athena is used to query the results and an ODBC connection is made with PowerBI to display them.  The current PowerBI dashboard is quite basic and will be updated with proper visualizations.
 
+## Example Results
+Here is an example page of a PowerBI dashboard from our results.  Note that it is currently very basic and proper, updated visualizations will be created.
+![Screenshot of a basic PowerBI Dashboard.](/powerBI/images/basic_dashboard.PNG)
+
 ## To Do
-- Create nice PowerBI dash board
+- Create nice PowerBI dashboard
 - Complete then add pytests folder from local testing
 - Add terraform for remaining AWS resources (scraper, etc. on ec2)
 - Add documentation for others to run end-to-end
