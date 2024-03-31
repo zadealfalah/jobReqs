@@ -1,6 +1,6 @@
 # jobReqs - Python, AWS, Scrapy, openAI, docker, terraform
 
-![AWS Architecture Diagram](/images/aws_architecture.jpg)
+![AWS Architecture Diagram](/images/aws_architecture.jpeg)
 
 ## Table of Contents
 * [General Info](#general-info)
