@@ -1,5 +1,4 @@
 import unittest
-from unittest.mock import patch
 from cleaning_techs.lambda_function import remove_techs_exact, map_techs
 
 class TestCleaningTechs(unittest.TestCase):
