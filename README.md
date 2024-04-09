@@ -40,10 +40,8 @@ Here is an example page of a PowerBI dashboard from our results.  Note that it i
 
 ## To Do
 - Create nice PowerBI dashboard
-- Complete then add pytests folder from local testing
+- Add testing folders/files
 - Add terraform for remaining AWS resources (scraper, etc. on ec2)
-- Add documentation for others to run end-to-end
-- Create architecture diagram(s)
 - Create Hugging Face training data (classifier already working, input data subpar)
 - Update binary classifer - add more training data to tune further and create updated .pkl files
 - Create ML workflow for classifier/ner on AWS
