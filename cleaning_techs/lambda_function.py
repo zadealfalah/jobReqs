@@ -96,13 +96,12 @@ def map_techs(lst, mappings):
     return processed_lst
 
 
-
-
-s3 = boto3.client('s3')
-logger = logging.getLogger()
-logger.setLevel(logging.INFO)
-
 def lambda_handler(event, context):
+    s3 = boto3.client('s3')
+    logger = logging.getLogger()
+    logger.setLevel(logging.INFO)
+    
+    
     bucket = event['Records'][0]['s3']['bucket']['name']
     key = event['Records'][0]['s3']['object']['key']
     stripped_key = key.split("/")[-1]
