@@ -27,36 +27,6 @@ s3 = boto3.client('s3')
 logger = logging.getLogger()
 logger.setLevel(logging.INFO)
 
-#### Should add max_requests_per_minute and max_tokens_per_minute as env
-#### gpt-3.5-turbo currently has 60,000 tokens/min, 500 requests/min maxes
-#### check imports, update gpt_requirements as needed
-#### need to update how it reads files, as it currently assumes a local file
-#### need to update how it saves files, as it currently assumes a local save path
-#### currently requires input to be in the requests_filepath format, must change code to accept my formatting.
-## For the above formatting, can add model, input, metadata fields to every line and select those for each where input can reference the shortened jd
-
-## filename locally saved to '/tmp/' so we can do the following:
-## filename = 'tmp/'+{key}
-## s3.Bucket(bucketname).download_file(key, filename)
-        # process_api_requests_from_file(
-        #     requests_filepath=local_filename,
-        #     save_filepath=local_filename_saved,
-        #     requests_url="https://api.openai.com/v1/chat/completions",
-        #     api_key=str(os.getenv("OPENAI_API_KEY")),
-        #     max_requests_per_minute=float(500),
-        #     max_tokens_per_minute=float(59999),
-        #     token_encoding_name="cl100k_base", # Default, should work for tiktoken and 3.5-turbo
-        #     max_attempts=int(5),
-        #     gpt_model=str(os.getenv("GPT_MODEL")), # testing with gpt-3.5-turbo for now
-        #     gpt_init_prompt=str(os.getenv("GPT_PROMPT")),
-        #     gpt_example_1=str(os.getenv("EXAMPLE_TEXT_1")),
-        #     gpt_response_1=str(os.getenv("EXAMPLE_RESPONSE_1")),
-        #     gpt_example_2=str(os.getenv("EXAMPLE_TEXT_2")),
-        #     gpt_response_2=str(os.getenv("EXAMPLE_RESPONSE_2")),
-        #     gpt_question=str(os.getenv("EXAMPLE_PROMPT")),
-        #     gpt_temp=float(os.getenv("GPT_TEMP")),
-
-
 
 async def process_api_requests_from_file(
     requests_filepath: str,
@@ -324,17 +294,7 @@ class APIRequest:
                 status_tracker.num_tasks_in_progress -= 1
                 status_tracker.num_tasks_failed += 1
         else:
-            # data = (
-            #     [self.request_json, response, self.metadata]
-            #     if self.metadata
-            #     else [self.request_json, response]
-            # )
-            
-            ## Update gpt tech list response
-            # print(response)
             cleaned_techs = clean_gpt_list(response)
-            # response['choices'][0]['message']['content'] = cleaned_techs
-            
             
             data = self.request_json.copy()
             data.update(response)  # Add the gpt response to data
@@ -396,7 +356,6 @@ def num_tokens_consumed_from_request(
         max_tokens = json_payload.get("max_tokens", 3000)
         n = json_payload.get("n", 1)
         completion_tokens = n * max_tokens
-
         # chat completions
         if api_endpoint.startswith("chat/"):
             num_tokens = 0
@@ -408,22 +367,6 @@ def num_tokens_consumed_from_request(
                         num_tokens -= 1  # role is always required and always 1 token
             num_tokens += 2  # every reply is primed with <im_start>assistant
             return num_tokens + completion_tokens
-        # # normal completions, not relevant but may be in the future
-        # else:
-        #     prompt = request_json["prompt"]
-        #     if isinstance(prompt, str):  # single prompt
-        #         prompt_tokens = len(encoding.encode(prompt))
-        #         num_tokens = prompt_tokens + completion_tokens
-        #         return num_tokens
-        #     elif isinstance(prompt, list):  # multiple prompts
-        #         prompt_tokens = sum([len(encoding.encode(p)) for p in prompt])
-        #         num_tokens = prompt_tokens + completion_tokens * len(prompt)
-        #         return num_tokens
-        #     else:
-        #         raise TypeError(
-        #             'Expecting either string or list of strings for "prompt" field in completion request'
-        #         )
-    # more logic needed to support other API calls (e.g., edits, inserts, DALL-E)
     else:
         raise NotImplementedError(
             f'API endpoint "{api_endpoint}" not implemented in this script'
@@ -437,11 +380,6 @@ def task_id_generator_function():
         yield task_id
         task_id += 1
 
-
-
-## To check if all async events were actually ran before saving to s3
-## Should have same num lines for input and output files
-## May error with incorrect formatting of jsonl, double check formatting if discrepant
 def count_jsonl_lines(file_path):
     line_count = 0
     with open(file_path, 'r', encoding='utf-8') as f:
@@ -474,19 +412,7 @@ def handler(event, context):
         logger.error(f"Error downloading file locally to {local_filename}:")
         logger.error(e)
         raise
-    
-    
-    ## To use s3.get_object instead, would need to change my process_api_requests_from_file()
-    # try:
-    #     response = s3.get_object(Bucket=bucket, Key=key)
-    #     json_lines = response['Body'].read().decode('utf-8').slitlines()
-    #     s3_data = [json.loads(line) for line in json_lines]
-    #     logger.info(f"{key} data saved to s3_data variable")
-    # except Exception as e:
-    #     logger.error(f"Error saving {key} to variable: {e}")
-    #     raise
-    
-    
+
     
     init_num_lines = count_jsonl_lines(local_filename)
     
