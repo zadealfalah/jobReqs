@@ -36,7 +36,7 @@ Once the data is as clean as we can get it, AWS Athena is used to query the resu
 
 ## Example Results
 Here is an example page of a PowerBI dashboard from our results.  Note that it is currently very basic and proper, updated visualizations will be created.
-![Screenshot of a basic PowerBI Dashboard.](/images/basic_dashboard.PNG)
+![Screenshot of a basic PowerBI Dashboard.](/images/updated_dashboard.PNG)
 
 ## To Do
 - Create nice PowerBI dashboard
