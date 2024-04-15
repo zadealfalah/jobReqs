@@ -10,6 +10,7 @@ s3 = boto3.client('s3')
 
 
 def upload_to_s3(data, object_key):
+    "Uploads file to s3"
     save_bucket_name = os.environ.get("SAVE_BUCKET_NAME")
     save_bucket_folder = os.environ.get("SAVE_FOLDER_NAME")
     

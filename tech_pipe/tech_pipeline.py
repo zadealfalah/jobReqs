@@ -22,12 +22,8 @@ class TechIdentificationPipeline:
 
         
     def read_data_lines_from_file(self):
-        """Stores each line (job) into self.data assuming data file exists
-
-        Args:
-            filename (_type_): _description_
-            data (_type_): _description_
-        """
+        "Stores each line (job) into self.data assuming data file exists"
+        
         if not self.filename:
             self.logger.info(f"Error, no filename detected!")
         else:
@@ -41,6 +37,7 @@ class TechIdentificationPipeline:
     
     ###### Should add something to allow choices between various saved clf/tfidfs by version number.  Not needed for now
     def read_in_clf(self):
+        "Reads in the saved clf .pkl file by searching local files"
         try:
             for root, dirs, files in os.walk('.'):
                 if 'classifier_models' in dirs:
@@ -62,6 +59,7 @@ class TechIdentificationPipeline:
             self.logger.error(f"Error reading in clf: {e}")
     
     def read_in_tfidf(self):
+        "Reads in the saved tfidf .pkl file by searching local files"
         try:
             for root, dirs, files in os.walk('.'):
                 if 'classifier_models' in dirs:
@@ -87,16 +85,6 @@ class TechIdentificationPipeline:
     def select_relevant_text(self, n=5):
         """Uses pretrained binary classifier to decide if a given section of jd is relevant to techs.  
         Used to shorted number of tokens for GPT.  Adds split jds directly to each job in self.data, rewrites self.filename.
-
-        Args:
-            data (list): List of jobs from read_data_lines()
-            vectorizer (_type_): _description_
-            clf (_type_): _description_
-            nlp (_type_): _description_
-            n (int, optional): Number of sections to split text in to. Defaults to 5.
-
-        Returns:
-            _type_: _description_
         """
         if self.data == []:
             self.logger.info(f"Data field is empty! Reading in data from {self.filename}")
