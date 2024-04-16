@@ -14,6 +14,7 @@ NEWSPIDER_MODULE = "indscraper.spiders"
 
 
 SCRAPEOPS_PROXY_ENABLED = True
+# SCRAPEOPS_API_KEY = 'xxxxx' # Example of where to put scrapeops api key if manually kept
 
 ## Default to s3 bucket in the future.  Placeholder w/ json for now.
 # 'FEEDS' : {
