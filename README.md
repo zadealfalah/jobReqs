@@ -1,5 +1,7 @@
 # jobReqs - Python, AWS, Scrapy, openAI, docker, terraform
 
+## On Hiatus As Of 5/20/2024
+
 ![AWS Architecture Diagram](/images/aws_architecture.jpeg)
 
 ## Table of Contents
@@ -10,6 +12,7 @@
 * [Last Steps](#last-steps)
 * [Example Results](#example-results)
 * [To Do](#to-do)
+* [Hiatus](#hiatus)
 
 ## General Info
 This project involves scraping jobs from Indeed via scrapy spiders to find trends in various data-based job opportunities.  The data is collected and cleaned daily via AWS and the results are visible via PowerBI.  A basic dashboard has already been created and some images from it can be seen in the [Example Results](#example-results) section.
@@ -43,6 +46,9 @@ Here is an example page of a PowerBI dashboard from our results.  Note that it i
 - Complete then add pytests folder from local testing
 - Add terraform for remaining AWS resources (scraper, etc. on ec2)
 - Add documentation for others to run end-to-end
+
+## Hiatus
+As of 5/20/2024 this project has been put on hiatus.  I will probably be returning to it in a few months to follow up on the above to-do lists, but it has served its purpose and ran without changes for a few months.  Future work will most likely focus on using the already collected data, or productionizing the code. 
 - Create architecture diagram(s)
 - Create Hugging Face training data (classifier already working, input data subpar)
 - Update binary classifer - add more training data to tune further and create updated .pkl files
