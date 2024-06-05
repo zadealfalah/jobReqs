@@ -1,2 +1,27 @@
 pandas
 boto3
+mlflow
+
+
+
+# Testing
+pytest
+great-expectations
+
+
+# Dev
+fastapi
+typer
+
+# Notebook
+jupyterlab
+
+# Documentation
+mkdocs
+mkdocstrings
+
+
+# Styling
+black
+flake8
+isort
