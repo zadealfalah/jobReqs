@@ -1,6 +1,0 @@
-\b(aws|amazon)\b, aws
-\b(ai|artificial intelligence|contextual ai)\b, ai
-\b(google|gcp)\b, google
-\b(power bi|powerbi)\b, powerbi
-\b(excel)\b, excel
-\b(microsoft word|ms word|ms office)\b, microsoft office
