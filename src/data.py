@@ -1,19 +1,18 @@
 import re
-from typing import Dict, Tuple, List
+from typing import Dict, List, Tuple
 
-from ray.data import Dataset
+import numpy as np
 import pandas as pd
 import ray
+from ray.data import Dataset
 from sklearn.model_selection import train_test_split
-import numpy as np
-
 from transformers import BertTokenizer
 
 from config import STOPWORDS
 
 
-## May want to change to be able to read in from scraper json output directly
-## random_shuffle doesn't need seed kwarg as we have utils.set_seeds()
+# May want to change to be able to read in from scraper json output directly
+# random_shuffle doesn't need seed kwarg as we have utils.set_seeds()
 def load_data(dataset_loc: str, num_samples: int = None) -> Dataset:
     ds = ray.data.read_csv(dataset_loc)
     ds = ds.random_shuffle()

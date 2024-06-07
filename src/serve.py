@@ -8,7 +8,8 @@ from fastapi import FastAPI
 from ray import serve
 from starlette.requests import Request
 
-import evaluate, predict
+import evaluate
+import predict
 from config import MLFLOW_TRACKING_URI, mlflow
 
 # Define application

@@ -1,7 +1,7 @@
 import datetime
 import json
 from collections import OrderedDict
-from typing import Dict, List, Callable
+from typing import Callable, Dict, List
 
 import numpy as np
 import ray
@@ -12,7 +12,8 @@ from sklearn.metrics import precision_recall_fscore_support
 from snorkel.slicing import PandasSFApplier, slicing_function
 from typing_extensions import Annotated
 
-import predict, utils
+import predict
+import utils
 from config import logger
 from predict import TorchPredictor
 

@@ -33,9 +33,9 @@ def test_stratify_split():
     assert train_target_counts == test_target_counts
 
 
-## Should update this further with more applicable jd terms/phrases
-## perhaps some more explicit / longer examples from actual jds seen
-## This works as a basic check for now though
+# Should update this further with more applicable jd terms/phrases
+# perhaps some more explicit / longer examples from actual jds seen
+# This works as a basic check for now though
 @pytest.mark.parametrize(
     "text, sw, clean_text",
     [

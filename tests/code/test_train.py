@@ -1,9 +1,9 @@
 import json
+
 import pytest
 
-from src import train
-
 import utils
+from src import train
 
 
 @pytest.mark.training

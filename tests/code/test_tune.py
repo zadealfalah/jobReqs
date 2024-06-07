@@ -1,8 +1,8 @@
 import json
 
 import pytest
-import utils
 
+import utils
 from src import tune
 
 

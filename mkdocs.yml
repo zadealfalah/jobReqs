@@ -1,0 +1,19 @@
+site_name: Job Description Classifier
+site_url: https://jdclassifier.com/
+repo_url: https://github.com/zadealfalah/jobReqs/tree/classifier_model/ # Currently in the classifier_model branch
+nav:
+  - Home: index.md
+  - jdclassifier:
+    - data: jdclassifier/data.md
+    - models: jdclassifier/models.md
+    - train: jdclassifier/train.md
+    - tune: jdclassifier/tune.md
+    - evaluate: jdclassifier/evaluate.md
+    - predict: jdclassifier/predict.md
+    - serve: jdclassifier/serve.md
+    - utils: jdclassifier/utils.md
+theme: readthedocs
+plugins:
+  - mkdocstrings
+watch:
+  - .  # reload docs for any file changes
