@@ -40,7 +40,7 @@ def train_step(
     num_classes: int,
     loss_fn: torch.nn.modules.loss._WeightedLoss,
     optimizer: torch.optim.Optimizer,
-) -> float: 
+) -> float:
     """Train step.
 
     Args:
@@ -68,10 +68,9 @@ def train_step(
     return loss
 
 
-
 def eval_step(
     ds: Dataset, batch_size: int, model: nn.Module, loss_fn: torch.nn.modules.loss._WeightedLoss, num_classes: int = 2
-) -> Tuple[float, np.array, np.array]:  
+) -> Tuple[float, np.array, np.array]:
     """Eval step.
 
     Args:
@@ -99,8 +98,7 @@ def eval_step(
     return loss, np.vstack(y_trues), np.vstack(y_preds)
 
 
-
-def train_loop_per_worker(config: dict) -> None: 
+def train_loop_per_worker(config: dict) -> None:
     """Training loop that each worker will execute.
 
     Args:
@@ -114,7 +112,7 @@ def train_loop_per_worker(config: dict) -> None:
     num_epochs = config["num_epochs"]
     batch_size = config["batch_size"]
     num_classes = config["num_classes"]
-    pretrained = config["pretrained"] # "allenai/scibert_scivocab_uncased"
+    pretrained = config["pretrained"]  # "allenai/scibert_scivocab_uncased"
 
     # Get datasets
     utils.set_seeds()
@@ -149,8 +147,8 @@ def train_loop_per_worker(config: dict) -> None:
             metrics = dict(epoch=epoch, lr=optimizer.param_groups[0]["lr"], train_loss=train_loss, val_loss=val_loss)
             checkpoint = Checkpoint.from_directory(dp)
             train.report(metrics, checkpoint=checkpoint)
-            
-            
+
+
 @app.command()
 def train_model(
     experiment_name: Annotated[str, typer.Option(help="name of the experiment for this training workload.")] = None,

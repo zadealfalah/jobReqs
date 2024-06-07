@@ -50,7 +50,7 @@ class FinetunedLLM(nn.Module):
         torch.save(self.state_dict(), os.path.join(dp, "model.pt"))
 
     @classmethod
-    def load(cls, args_fp, state_dict_fp, pretrained: str="allenai/scibert_scivocab_uncased"):
+    def load(cls, args_fp, state_dict_fp, pretrained: str = "allenai/scibert_scivocab_uncased"):
         with open(args_fp, "r") as fp:
             kwargs = json.load(fp=fp)
         llm = BertModel.from_pretrained(pretrained, return_dict=False)

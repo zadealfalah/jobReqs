@@ -2,8 +2,10 @@ import uuid
 
 from src.config import mlflow
 
+
 def generate_experiment_name(prefix: str = "test") -> str:
     return f"{prefix}-{uuid.uuid4().hex[:8]}"
+
 
 def delete_experiment(experiment_name: str) -> None:
     client = mlflow.tracking.MlflowClient()

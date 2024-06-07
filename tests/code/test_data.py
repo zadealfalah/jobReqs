@@ -4,16 +4,19 @@ import ray
 
 from src import data
 
+
 @pytest.fixture(scope="module")
 def df():
-    data = [{"job_key": "a0", "jd_part":"b0", "tag":"c0"}]
+    data = [{"job_key": "a0", "jd_part": "b0", "tag": "c0"}]
     df = pd.DataFrame(data)
     return df
 
+
 @pytest.fixture(scope="module")
 def class_to_index():
-    class_to_index = {"c0":0, "c1":1}
+    class_to_index = {"c0": 0, "c1": 1}
     return class_to_index
+
 
 def test_load_data(dataset_loc, num_samples=10):
     ds = data.load_data(dataset_loc=dataset_loc, num_samples=num_samples)
@@ -28,8 +31,8 @@ def test_stratify_split():
     train_target_counts = train_ds.to_pandas().target.value_counts().to_dict()
     test_target_counts = test_ds.to_pandas().target.value_counts().to_dict()
     assert train_target_counts == test_target_counts
-    
-    
+
+
 ## Should update this further with more applicable jd terms/phrases
 ## perhaps some more explicit / longer examples from actual jds seen
 ## This works as a basic check for now though
@@ -41,7 +44,6 @@ def test_stratify_split():
         ("hi yous", ["you"], "hi yous"),
     ],
 )
-
 def test_clean_text(text, sw, clean_text):
     assert data.clean_text(text=text, stopwords=sw) == clean_text
 

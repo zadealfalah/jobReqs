@@ -12,7 +12,8 @@ from config import mlflow
 
 DatasetContext.get_current().execution_options.preserve_order = True
 
-def set_seeds(seed:int = 5555):
+
+def set_seeds(seed: int = 5555):
     np.random.seed(seed)
     random.seed(seed)
     torch.manual_seed(seed)
@@ -20,26 +21,28 @@ def set_seeds(seed:int = 5555):
     eval("setattr(torch.backends.cudnn, 'deterministic', True)")
     eval("setattr(torch.backends.cudnn, 'benchmark', False)")
     os.environ["PYTHONHASHSEED"] = str(seed)
-    
+
+
 def load_dict(path: str) -> Dict:
-    
+
     with open(path) as fp:
         d = json.load(fp)
-        
+
     return d
 
+
 def save_dict(d: Dict, path: str, cls: Any = None, sortkeys: bool = False) -> None:
-    
+
     directory = os.path.dirname(path)
     if directory and not os.path.exists(directory):
         os.makedirs(directory)
-    with open(path, 'w') as fp:
+    with open(path, "w") as fp:
         json.dump(d, indent=2, fp=fp, cls=cls, sort_keys=sortkeys)
         fp.write("\n")
-    
+
 
 def pad_array(arr: np.ndarray, dtype=np.int32) -> np.ndarray:
-    
+
     max_len = max(len(row) for row in arr)
     padded_arr = np.zeros((arr.shape[0], max_len), dtype=dtype)
     for i, row in enumerate(arr):

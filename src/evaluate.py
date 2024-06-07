@@ -20,7 +20,7 @@ from predict import TorchPredictor
 app = typer.Typer()
 
 
-def get_overall_metrics(y_true: np.ndarray, y_pred: np.ndarray) -> Dict:  
+def get_overall_metrics(y_true: np.ndarray, y_pred: np.ndarray) -> Dict:
     """Get overall performance metrics.
 
     Args:
@@ -40,7 +40,7 @@ def get_overall_metrics(y_true: np.ndarray, y_pred: np.ndarray) -> Dict:
     return overall_metrics
 
 
-def get_per_class_metrics(y_true: np.ndarray, y_pred: np.ndarray, class_to_index: Dict) -> Dict:  
+def get_per_class_metrics(y_true: np.ndarray, y_pred: np.ndarray, class_to_index: Dict) -> Dict:
     """Get per class performance metrics.
 
     Args:
@@ -66,16 +66,15 @@ def get_per_class_metrics(y_true: np.ndarray, y_pred: np.ndarray, class_to_index
 
 # Really just an example slicing function
 # Not sure of what we'd need to slice for atm.
-# If I think of more can add to get_slice_metrics 
+# If I think of more can add to get_slice_metrics
 # e.g. slices=PandasSFApplier([short_text, other_function, third_fnct]).apply(df)
 @slicing_function()
-def short_text(x):  
+def short_text(x):
     """Jd parts with short descriptions."""
     return len(x.text.split()) < 8  # less than 8 words
 
 
-def get_slice_metrics(y_true: np.ndarray, y_pred: np.ndarray, ds: Dataset,
-                      slicers: List[Callable] = [short_text]) -> Dict:  
+def get_slice_metrics(y_true: np.ndarray, y_pred: np.ndarray, ds: Dataset, slicers: List[Callable] = [short_text]) -> Dict:
     """Get performance metrics for slices.
 
     Args:
@@ -147,5 +146,5 @@ def evaluate(
     return metrics
 
 
-if __name__ == "__main__":  
+if __name__ == "__main__":
     app()

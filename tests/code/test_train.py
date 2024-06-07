@@ -5,6 +5,7 @@ from src import train
 
 import utils
 
+
 @pytest.mark.training
 def test_train_model(dataset_loc):
     experiment_name = utils.generate_experiment_name(prefix="test_train")

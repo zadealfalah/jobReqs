@@ -5,6 +5,7 @@ import utils
 
 from src import tune
 
+
 @pytest.mark.training
 def test_tune_models(dataset_loc):
     num_runs = 2
