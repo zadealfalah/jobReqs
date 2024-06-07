@@ -1,0 +1,11 @@
+name: jobclassifer
+project_id: 
+cluster_env: 
+compute_config: 
+runtime_env:
+  working_dir: .
+  upload_path: 
+  env_vars:
+    GITHUB_USERNAME: 
+entrypoint: bash deploy/jobs/workloads.sh
+max_retries: 0

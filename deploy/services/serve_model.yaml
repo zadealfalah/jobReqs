@@ -1,0 +1,12 @@
+name: jobclassifer
+project_id: 
+cluster_env: 
+compute_config: 
+ray_serve_config:
+  import_path: deploy.services.serve_model:entrypoint
+  runtime_env:
+    working_dir: .
+    upload_path: 
+    env_vars:
+      GITHUB_USERNAME: 
+rollout_strategy: ROLLOUT # ROLLOUT or IN_PLACE
