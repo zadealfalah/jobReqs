@@ -1,0 +1,7 @@
+cloud:
+region:
+head_node_type:
+
+worker_node_types:
+
+aws:
